@@ -171,10 +171,35 @@ def pair_embeddings(model, triples_factory, pairs: pd.DataFrame, device: str) ->
     return np.concatenate([heads, tails], axis=1)
 
 
+def _map_triples_preserving_rows(triples_factory, triples: pd.DataFrame) -> torch.Tensor:
+    triples = triples[TRIPLE_COLUMNS].astype(str).reset_index(drop=True)
+    heads = triples["head"].map(triples_factory.entity_to_id)
+    relations = triples["relation"].map(triples_factory.relation_to_id)
+    tails = triples["tail"].map(triples_factory.entity_to_id)
+
+    missing_parts = []
+    for name, mapped in [("head", heads), ("relation", relations), ("tail", tails)]:
+        if mapped.isna().any():
+            examples = triples.loc[mapped.isna(), TRIPLE_COLUMNS].head(5).to_dict("records")
+            missing_parts.append(f"{name}: {examples}")
+    if missing_parts:
+        raise ValueError("Cannot score triples with labels missing from the PyKEEN factory. " + "; ".join(missing_parts))
+
+    mapped = np.stack(
+        [
+            heads.to_numpy(dtype=np.int64),
+            relations.to_numpy(dtype=np.int64),
+            tails.to_numpy(dtype=np.int64),
+        ],
+        axis=1,
+    )
+    return torch.as_tensor(mapped, dtype=torch.long)
+
+
 def score_triples(model, triples_factory, triples: pd.DataFrame, device: str, batch_size: int) -> np.ndarray:
     _prepare_model_for_inference(model)
 
-    mapped = triples_factory.map_triples(triples[TRIPLE_COLUMNS].to_numpy(dtype=str))
+    mapped = _map_triples_preserving_rows(triples_factory, triples)
     scores = []
 
     with torch.no_grad():

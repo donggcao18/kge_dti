@@ -51,6 +51,9 @@ def run_fold(
     fold_number = fold + 1
     print(f"Fold {fold_number} ({args.split}, {args.kge_model})")
     train, test = load_fold(spec, fold)
+    duplicate_test_triples = int(test.duplicated(TRIPLE_COLUMNS).sum())
+    if duplicate_test_triples:
+        print(f"Fold {fold_number} has {duplicate_test_triples} duplicate test triples; scores will preserve all rows.")
     train_pos = train.loc[train["label"] == 1, TRIPLE_COLUMNS]
     kge_train = pd.concat([train_pos, kg], ignore_index=True)[TRIPLE_COLUMNS].astype(str)
 

@@ -1,4 +1,5 @@
 import copy
+from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
@@ -9,27 +10,36 @@ from torch.utils.data import DataLoader, Dataset
 from metrics_utils import pr_auc, roc_auc
 
 
-class PairFeatureDataset(Dataset):
+class FieldFeatureDataset(Dataset):
     def __init__(
         self,
-        head_ids: np.ndarray,
-        tail_ids: np.ndarray,
-        dense_features: np.ndarray,
+        feature_fields: Sequence[np.ndarray],
         labels: np.ndarray | None = None,
     ) -> None:
-        self.head_ids = torch.as_tensor(head_ids, dtype=torch.long)
-        self.tail_ids = torch.as_tensor(tail_ids, dtype=torch.long)
-        self.dense_features = torch.as_tensor(dense_features, dtype=torch.float32)
+        if not feature_fields:
+            raise ValueError("NFM requires at least one feature field.")
+
+        row_count = feature_fields[0].shape[0]
+        self.feature_fields = []
+        for index, field in enumerate(feature_fields):
+            if field.ndim != 2:
+                raise ValueError(f"NFM field {index} must be a 2D array, got shape {field.shape}.")
+            if field.shape[0] != row_count:
+                raise ValueError(
+                    f"NFM field {index} has {field.shape[0]} rows, expected {row_count}."
+                )
+            self.feature_fields.append(torch.as_tensor(field, dtype=torch.float32))
+
+        if labels is not None and labels.shape[0] != row_count:
+            raise ValueError(f"NFM labels have {labels.shape[0]} rows, expected {row_count}.")
         self.labels = None if labels is None else torch.as_tensor(labels, dtype=torch.float32)
 
     def __len__(self) -> int:
-        return self.head_ids.shape[0]
+        return self.feature_fields[0].shape[0]
 
     def __getitem__(self, index: int):
         item = {
-            "head": self.head_ids[index],
-            "tail": self.tail_ids[index],
-            "feats": self.dense_features[index],
+            "fields": tuple(field[index] for field in self.feature_fields),
         }
         if self.labels is not None:
             item["label"] = self.labels[index]
@@ -39,19 +49,26 @@ class PairFeatureDataset(Dataset):
 class TorchNFM(nn.Module):
     def __init__(
         self,
-        num_heads: int,
-        num_tails: int,
-        sparse_embedding_dim: int,
-        dense_feature_dim: int,
+        field_dims: Sequence[int],
+        field_embedding_dim: int,
         hidden_units: tuple[int, ...] = (128, 128),
         dropout: float = 0.0,
     ) -> None:
         super().__init__()
-        self.head_embedding = nn.Embedding(num_heads, sparse_embedding_dim)
-        self.tail_embedding = nn.Embedding(num_tails, sparse_embedding_dim)
+        if field_embedding_dim <= 0:
+            raise ValueError(f"field_embedding_dim must be positive, got {field_embedding_dim}.")
+        if len(field_dims) < 2:
+            raise ValueError(f"NFM requires at least two feature fields, got {len(field_dims)}.")
+        if any(dim <= 0 for dim in field_dims):
+            raise ValueError(f"All NFM field dimensions must be positive, got {tuple(field_dims)}.")
+
+        self.field_projections = nn.ModuleList(
+            [nn.Linear(field_dim, field_embedding_dim) for field_dim in field_dims]
+        )
+        self.linear_terms = nn.ModuleList([nn.Linear(field_dim, 1) for field_dim in field_dims])
 
         layers: list[nn.Module] = []
-        input_dim = sparse_embedding_dim + dense_feature_dim
+        input_dim = field_embedding_dim
         for hidden_dim in hidden_units:
             layers.append(nn.Linear(input_dim, hidden_dim))
             layers.append(nn.ReLU())
@@ -63,49 +80,46 @@ class TorchNFM(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
-        nn.init.xavier_uniform_(self.head_embedding.weight)
-        nn.init.xavier_uniform_(self.tail_embedding.weight)
-        for module in self.mlp:
+        for module in [*self.field_projections, *self.linear_terms, *self.mlp]:
             if isinstance(module, nn.Linear):
                 nn.init.xavier_uniform_(module.weight)
                 nn.init.zeros_(module.bias)
 
-    def forward(self, head_ids: torch.Tensor, tail_ids: torch.Tensor, dense_features: torch.Tensor) -> torch.Tensor:
-        sparse_embeddings = torch.stack(
-            [self.head_embedding(head_ids), self.tail_embedding(tail_ids)],
+    def forward(self, feature_fields: Sequence[torch.Tensor]) -> torch.Tensor:
+        if len(feature_fields) != len(self.field_projections):
+            raise ValueError(
+                f"Expected {len(self.field_projections)} NFM fields, got {len(feature_fields)}."
+            )
+
+        projected_fields = torch.stack(
+            [
+                projection(field)
+                for projection, field in zip(self.field_projections, feature_fields, strict=False)
+            ],
             dim=1,
         )
-        summed = sparse_embeddings.sum(dim=1)
+        summed = projected_fields.sum(dim=1)
         squared_sum = summed * summed
-        sum_squared = (sparse_embeddings * sparse_embeddings).sum(dim=1)
+        sum_squared = (projected_fields * projected_fields).sum(dim=1)
         bi_interaction = 0.5 * (squared_sum - sum_squared)
-        model_input = torch.cat([bi_interaction, dense_features], dim=1)
-        return self.mlp(model_input).squeeze(1)
 
-
-def encode_pair_ids(
-    pairs: pd.DataFrame,
-    head_encoder: dict[str, int],
-    tail_encoder: dict[str, int],
-    context: str,
-) -> tuple[np.ndarray, np.ndarray]:
-    head_ids = pairs["head"].map(head_encoder)
-    tail_ids = pairs["tail"].map(tail_encoder)
-    if head_ids.isna().any() or tail_ids.isna().any():
-        raise ValueError(f"{context} pairs contain sparse IDs missing from the encoder.")
-    return head_ids.to_numpy(dtype=np.int64), tail_ids.to_numpy(dtype=np.int64)
+        deep_logit = self.mlp(bi_interaction).squeeze(1)
+        linear_logit = torch.stack(
+            [
+                linear(field).squeeze(1)
+                for linear, field in zip(self.linear_terms, feature_fields, strict=False)
+            ],
+            dim=0,
+        ).sum(dim=0)
+        return deep_logit + linear_logit
 
 
 def train_nfm(
-    train_pairs: pd.DataFrame,
+    train_feature_fields: Sequence[np.ndarray],
     train_labels: np.ndarray,
-    test_pairs: pd.DataFrame,
+    test_feature_fields: Sequence[np.ndarray],
     test_labels: np.ndarray,
-    train_features: np.ndarray,
-    test_features: np.ndarray,
-    head_encoder: dict[str, int],
-    tail_encoder: dict[str, int],
-    sparse_embedding_dim: int,
+    field_embedding_dim: int,
     epochs: int,
     batch_size: int,
     device: str,
@@ -115,23 +129,27 @@ def train_nfm(
     dropout: float,
     hidden_units: tuple[int, ...],
     patience: int,
+    field_names: Sequence[str] | None = None,
 ) -> tuple[pd.DataFrame, float, pd.DataFrame, float, np.ndarray]:
     torch.manual_seed(seed)
-    train_head_ids, train_tail_ids = encode_pair_ids(train_pairs, head_encoder, tail_encoder, "Training")
-    test_head_ids, test_tail_ids = encode_pair_ids(test_pairs, head_encoder, tail_encoder, "Test")
+    field_dims = tuple(field.shape[1] for field in train_feature_fields)
+    if field_names is None:
+        field_names = [f"field_{index}" for index in range(len(field_dims))]
 
-    train_dataset = PairFeatureDataset(train_head_ids, train_tail_ids, train_features, train_labels)
-    test_dataset = PairFeatureDataset(test_head_ids, test_tail_ids, test_features)
+    print("NFM fields:")
+    for name, dim in zip(field_names, field_dims, strict=False):
+        print(f"  {name}: {dim}")
+
+    train_dataset = FieldFeatureDataset(train_feature_fields, train_labels)
+    test_dataset = FieldFeatureDataset(test_feature_fields)
     generator = torch.Generator()
     generator.manual_seed(seed)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, generator=generator)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     model = TorchNFM(
-        num_heads=len(head_encoder),
-        num_tails=len(tail_encoder),
-        sparse_embedding_dim=sparse_embedding_dim,
-        dense_feature_dim=train_features.shape[1],
+        field_dims=field_dims,
+        field_embedding_dim=field_embedding_dim,
         hidden_units=hidden_units,
         dropout=dropout,
     ).to(device)
@@ -148,13 +166,11 @@ def train_nfm(
         total_loss = 0.0
         total_count = 0
         for batch in train_loader:
-            head = batch["head"].to(device)
-            tail = batch["tail"].to(device)
-            feats = batch["feats"].to(device)
+            fields = [field.to(device) for field in batch["fields"]]
             label = batch["label"].to(device)
 
             optimizer.zero_grad(set_to_none=True)
-            logits = model(head, tail, feats)
+            logits = model(fields)
             loss = criterion(logits, label)
             loss.backward()
             optimizer.step()
@@ -179,11 +195,7 @@ def train_nfm(
     predictions = []
     with torch.no_grad():
         for batch in test_loader:
-            logits = model(
-                batch["head"].to(device),
-                batch["tail"].to(device),
-                batch["feats"].to(device),
-            )
+            logits = model([field.to(device) for field in batch["fields"]])
             predictions.append(torch.sigmoid(logits).detach().cpu().numpy())
     pred = np.concatenate(predictions).reshape(-1)
     roc_curve, roc_value = roc_auc(test_labels, pred)

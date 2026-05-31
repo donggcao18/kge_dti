@@ -163,11 +163,16 @@ def entity_embeddings(model, triples_factory, labels: Iterable[str], device: str
     return representation.detach().cpu().numpy()
 
 
-def pair_embeddings(model, triples_factory, pairs: pd.DataFrame, device: str) -> np.ndarray:
+def pair_embedding_blocks(model, triples_factory, pairs: pd.DataFrame, device: str) -> tuple[np.ndarray, np.ndarray]:
     _prepare_model_for_inference(model)
 
     heads = entity_embeddings(model, triples_factory, pairs["head"].astype(str).tolist(), device)
     tails = entity_embeddings(model, triples_factory, pairs["tail"].astype(str).tolist(), device)
+    return heads, tails
+
+
+def pair_embeddings(model, triples_factory, pairs: pd.DataFrame, device: str) -> np.ndarray:
+    heads, tails = pair_embedding_blocks(model, triples_factory, pairs, device)
     return np.concatenate([heads, tails], axis=1)
 
 

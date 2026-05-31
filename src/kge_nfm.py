@@ -13,15 +13,13 @@ from sklearn.preprocessing import MinMaxScaler
 from constants import TRIPLE_COLUMNS
 from data_utils import (
     DatasetSpec,
-    encode_labels,
     get_dataset_spec,
-    load_all_dti,
     load_feature_tables,
     load_fold,
     load_kg,
-    merge_features,
+    merge_feature_blocks,
 )
-from kge import pair_embeddings, require_entities, score_triples, train_compgcn, train_distmult
+from kge import pair_embedding_blocks, require_entities, score_triples, train_compgcn, train_distmult
 from metrics_utils import pr_auc, roc_auc
 from nfm import train_nfm
 from utils import ensure_output_dirs, parse_hidden_units, resolve_device, set_seed
@@ -37,6 +35,23 @@ def print_args(args: argparse.Namespace, data_root: Path, device: str) -> None:
         print(f"  {key}: {config[key]}")
 
 
+def scale_feature_fields(
+    train_fields: list[np.ndarray],
+    test_fields: list[np.ndarray],
+) -> tuple[list[np.ndarray], list[np.ndarray]]:
+    field_dims = [field.shape[1] for field in train_fields]
+    train_all = np.concatenate(train_fields, axis=1)
+    test_all = np.concatenate(test_fields, axis=1)
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    train_all = scaler.fit_transform(train_all).astype(np.float32)
+    test_all = scaler.transform(test_all).astype(np.float32)
+
+    offsets = np.cumsum([0, *field_dims])
+    train_scaled = [train_all[:, offsets[index] : offsets[index + 1]] for index in range(len(field_dims))]
+    test_scaled = [test_all[:, offsets[index] : offsets[index + 1]] for index in range(len(field_dims))]
+    return train_scaled, test_scaled
+
+
 def run_fold(
     fold: int,
     args: argparse.Namespace,
@@ -44,8 +59,6 @@ def run_fold(
     kg: pd.DataFrame,
     drug_df: pd.DataFrame,
     protein_df: pd.DataFrame,
-    head_encoder: dict[str, int],
-    tail_encoder: dict[str, int],
     device: str,
 ) -> dict[str, float]:
     fold_number = fold + 1
@@ -100,27 +113,48 @@ def run_fold(
 
     train_pairs = train[TRIPLE_COLUMNS]
     test_pairs = test[TRIPLE_COLUMNS]
-    train_kge_features = pair_embeddings(kge_model, triples_factory, train_pairs, device)
-    test_kge_features = pair_embeddings(kge_model, triples_factory, test_pairs, device)
-    train_des = merge_features(train_pairs, drug_df, protein_df, spec, use_protein_features=not args.drug_features_only)
-    test_des = merge_features(test_pairs, drug_df, protein_df, spec, use_protein_features=not args.drug_features_only)
+    train_drug_kge, train_protein_kge = pair_embedding_blocks(kge_model, triples_factory, train_pairs, device)
+    test_drug_kge, test_protein_kge = pair_embedding_blocks(kge_model, triples_factory, test_pairs, device)
+    train_descriptor_fields = merge_feature_blocks(
+        train_pairs,
+        drug_df,
+        protein_df,
+        spec,
+        use_protein_features=not args.drug_features_only,
+    )
+    test_descriptor_fields = merge_feature_blocks(
+        test_pairs,
+        drug_df,
+        protein_df,
+        spec,
+        use_protein_features=not args.drug_features_only,
+    )
 
-    train_all_features = np.concatenate([train_kge_features, train_des], axis=1)
-    test_all_features = np.concatenate([test_kge_features, test_des], axis=1)
-    scaler = MinMaxScaler(feature_range=(0, 1))
-    train_all_features = scaler.fit_transform(train_all_features).astype(np.float32)
-    test_all_features = scaler.transform(test_all_features).astype(np.float32)
+    train_feature_fields = [train_drug_kge, train_protein_kge, *train_descriptor_fields]
+    test_feature_fields = [test_drug_kge, test_protein_kge, *test_descriptor_fields]
+    field_names = ["drug_kg_embedding", "protein_kg_embedding", "drug_descriptor"]
+    if not args.drug_features_only:
+        field_names.append("protein_descriptor")
+    if args.include_kge_score_feature:
+        train_kge_scores = score_triples(
+            kge_model,
+            triples_factory,
+            train_pairs,
+            device,
+            args.kge_batch_size,
+        ).reshape(-1, 1)
+        train_feature_fields.append(train_kge_scores)
+        test_feature_fields.append(kge_scores.reshape(-1, 1))
+        field_names.append("kge_score")
+
+    train_feature_fields, test_feature_fields = scale_feature_fields(train_feature_fields, test_feature_fields)
 
     roc_nfm, roc_nfm_value, pr_nfm, pr_nfm_value, nfm_pred = train_nfm(
-        train_pairs=train_pairs,
+        train_feature_fields=train_feature_fields,
         train_labels=train["label"].to_numpy(dtype=np.float32),
-        test_pairs=test_pairs,
         test_labels=test_labels,
-        train_features=train_all_features,
-        test_features=test_all_features,
-        head_encoder=head_encoder,
-        tail_encoder=tail_encoder,
-        sparse_embedding_dim=args.nfm_sparse_embedding_dim,
+        test_feature_fields=test_feature_fields,
+        field_embedding_dim=args.nfm_field_embedding_dim,
         epochs=args.nfm_epochs,
         batch_size=args.batch_size,
         device=device,
@@ -130,6 +164,7 @@ def run_fold(
         dropout=args.nfm_dropout,
         hidden_units=parse_hidden_units(args.nfm_hidden_units),
         patience=args.nfm_patience,
+        field_names=field_names,
     )
 
     roc_curve.to_csv(output_root / "curve" / "roc" / f"{fold}.csv", index=False)
@@ -180,7 +215,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=20000, help="NFM batch size.")
     parser.add_argument("--kge-model", choices=["distmult", "compgcn"], default="distmult")
     parser.add_argument("--embedding-dim", type=int, default=400, help="PyKEEN entity embedding dimension.")
-    parser.add_argument("--nfm-sparse-embedding-dim", type=int, default=50)
+    parser.add_argument(
+        "--nfm-field-embedding-dim",
+        "--nfm-sparse-embedding-dim",
+        dest="nfm_field_embedding_dim",
+        type=int,
+        default=50,
+        help="Latent dimension used to project each KG/descriptor field before NFM bi-interaction.",
+    )
+    parser.add_argument(
+        "--include-kge-score-feature",
+        action="store_true",
+        help="Append the KGE triple score as an extra dense feature for the NFM predictor.",
+    )
     parser.add_argument("--protein-pca-components", type=int, default=100)
     parser.add_argument("--kge-lr", type=float, default=1e-3)
     parser.add_argument("--kge-num-negs", type=int, default=1)
@@ -215,12 +262,8 @@ def main() -> None:
     print_args(args, data_root, device)
 
     spec = get_dataset_spec(data_root, args.dataset, args.split)
-    all_dti = load_all_dti(spec)
     kg = load_kg(spec)
     drug_df, protein_df = load_feature_tables(spec, pca_components=args.protein_pca_components)
-
-    head_encoder = encode_labels(all_dti["head"].astype(str))
-    tail_encoder = encode_labels(all_dti["tail"].astype(str))
 
     metrics_by_fold = []
     for fold in range(args.folds):
@@ -232,8 +275,6 @@ def main() -> None:
                 kg=kg,
                 drug_df=drug_df,
                 protein_df=protein_df,
-                head_encoder=head_encoder,
-                tail_encoder=tail_encoder,
                 device=device,
             )
         )

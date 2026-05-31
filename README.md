@@ -77,7 +77,7 @@ python src/kge_nfm.py \
   --nfm-epochs 2000 \
   --kge-batch-size 1024 \
   --batch-size 20000 \
-  --nfm-sparse-embedding-dim 50 \
+  --nfm-field-embedding-dim 50 \
   --nfm-lr 0.001 \
   --nfm-weight-decay 0.00001 \
   --nfm-hidden-units 128,128 \

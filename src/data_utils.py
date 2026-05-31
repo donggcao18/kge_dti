@@ -133,13 +133,13 @@ def load_feature_tables(spec: DatasetSpec, pca_components: int) -> tuple[pd.Data
     return drug_df, protein_df
 
 
-def merge_features(
+def merge_feature_blocks(
     pairs: pd.DataFrame,
     drug_df: pd.DataFrame,
     protein_df: pd.DataFrame,
     spec: DatasetSpec,
     use_protein_features: bool,
-) -> np.ndarray:
+) -> list[np.ndarray]:
     drug_merged = pairs.merge(drug_df, how="left", left_on="head", right_on=spec.drug_id_col)
     protein_merged = pairs.merge(protein_df, how="left", left_on="tail", right_on=spec.protein_id_col)
 
@@ -148,11 +148,31 @@ def merge_features(
     drug_features = drug_features.select_dtypes(include=[np.number]).to_numpy(dtype=np.float32)
     protein_features = protein_features.select_dtypes(include=[np.number]).to_numpy(dtype=np.float32)
 
-    features = np.concatenate([drug_features, protein_features], axis=1) if use_protein_features else drug_features
-    if np.isnan(features).any():
-        missing = pairs.loc[np.isnan(features).any(axis=1), ["head", "tail"]].head()
+    feature_blocks = [drug_features, protein_features] if use_protein_features else [drug_features]
+    features_for_check = np.concatenate(feature_blocks, axis=1)
+    if np.isnan(features_for_check).any():
+        missing = pairs.loc[np.isnan(features_for_check).any(axis=1), ["head", "tail"]].head()
         raise ValueError(f"Missing descriptor features for some pairs, examples:\n{missing}")
-    return features
+    return feature_blocks
+
+
+def merge_features(
+    pairs: pd.DataFrame,
+    drug_df: pd.DataFrame,
+    protein_df: pd.DataFrame,
+    spec: DatasetSpec,
+    use_protein_features: bool,
+) -> np.ndarray:
+    return np.concatenate(
+        merge_feature_blocks(
+            pairs=pairs,
+            drug_df=drug_df,
+            protein_df=protein_df,
+            spec=spec,
+            use_protein_features=use_protein_features,
+        ),
+        axis=1,
+    )
 
 
 def encode_labels(values: Iterable[str]) -> dict[str, int]:

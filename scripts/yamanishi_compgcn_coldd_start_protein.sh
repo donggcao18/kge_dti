@@ -19,7 +19,7 @@ python src/kge_nfm.py \
   --device auto \
   --kge-model "$model" \
   --embedding-dim 200 \
-  --kge-epochs 5 \
+  --kge-epochs 50 \
   --kge-batch-size 8192 \
   --kge-num-negs 5 \
   --compgcn-layers 2 \

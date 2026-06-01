@@ -13,7 +13,7 @@ python src/kge_nfm.py \
   --data-root /kaggle/input/datasets/ngcaovn/kge-dti/data \
   --split $split \
   --kge-model $model \
-  --folds 10 \
+  --folds 5 \
   --device auto \
   --embedding-dim 400 \
   --kge-epochs 50 \

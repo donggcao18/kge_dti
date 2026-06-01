@@ -16,7 +16,7 @@ python src/kge_nfm.py \
   --output-dir "./output/kge_nfm_compgcn_${split}" \
   --data-root "$data_root" \
   --split "$split" \
-  --folds 10 \
+  --folds 5 \
   --device auto \
   --kge-model $model \
   --embedding-dim 200 \

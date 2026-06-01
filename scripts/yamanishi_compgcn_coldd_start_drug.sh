@@ -27,7 +27,7 @@ python src/kge_nfm.py \
   --compgcn-composition mult \
   --nfm-epochs 200 \
   --batch-size 20000 \
-  --nfm-field-embedding-dim 50 \
+  --nfm-field-embedding-dim 100 \
   --nfm-lr 0.001 \
   --nfm-weight-decay 1e-3 \
   --nfm-dropout 0.2 \

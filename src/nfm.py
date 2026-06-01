@@ -1,5 +1,6 @@
 import copy
 from collections.abc import Sequence
+import re
 
 import numpy as np
 import pandas as pd
@@ -8,6 +9,11 @@ from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
 from metrics_utils import pr_auc, roc_auc
+
+
+def _module_key(name: str, index: int) -> str:
+    key = re.sub(r"[^0-9a-zA-Z_]", "_", name).strip("_").lower()
+    return key or f"field_{index}"
 
 
 class FieldFeatureDataset(Dataset):
@@ -51,6 +57,7 @@ class TorchNFM(nn.Module):
         self,
         field_dims: Sequence[int],
         field_embedding_dim: int,
+        field_names: Sequence[str] | None = None,
         hidden_units: tuple[int, ...] = (128, 128),
         dropout: float = 0.0,
     ) -> None:
@@ -61,11 +68,28 @@ class TorchNFM(nn.Module):
             raise ValueError(f"NFM requires at least two feature fields, got {len(field_dims)}.")
         if any(dim <= 0 for dim in field_dims):
             raise ValueError(f"All NFM field dimensions must be positive, got {tuple(field_dims)}.")
+        if field_names is None:
+            field_names = [f"field_{index}" for index in range(len(field_dims))]
+        if len(field_names) != len(field_dims):
+            raise ValueError(f"Got {len(field_names)} field names for {len(field_dims)} field dimensions.")
 
-        self.field_projections = nn.ModuleList(
-            [nn.Linear(field_dim, field_embedding_dim) for field_dim in field_dims]
+        self.field_names = tuple(field_names)
+        self.field_keys = tuple(_module_key(name, index) for index, name in enumerate(self.field_names))
+        if len(set(self.field_keys)) != len(self.field_keys):
+            raise ValueError(f"NFM field names must be unique after normalization, got {self.field_names}.")
+
+        self.field_projections = nn.ModuleDict(
+            {
+                key: nn.Linear(field_dim, field_embedding_dim)
+                for key, field_dim in zip(self.field_keys, field_dims, strict=False)
+            }
         )
-        self.linear_terms = nn.ModuleList([nn.Linear(field_dim, 1) for field_dim in field_dims])
+        self.linear_terms = nn.ModuleDict(
+            {
+                key: nn.Linear(field_dim, 1)
+                for key, field_dim in zip(self.field_keys, field_dims, strict=False)
+            }
+        )
 
         layers: list[nn.Module] = []
         input_dim = field_embedding_dim
@@ -80,7 +104,7 @@ class TorchNFM(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
-        for module in [*self.field_projections, *self.linear_terms, *self.mlp]:
+        for module in [*self.field_projections.values(), *self.linear_terms.values(), *self.mlp]:
             if isinstance(module, nn.Linear):
                 nn.init.xavier_uniform_(module.weight)
                 nn.init.zeros_(module.bias)
@@ -93,8 +117,8 @@ class TorchNFM(nn.Module):
 
         projected_fields = torch.stack(
             [
-                projection(field)
-                for projection, field in zip(self.field_projections, feature_fields, strict=False)
+                self.field_projections[key](field)
+                for key, field in zip(self.field_keys, feature_fields, strict=False)
             ],
             dim=1,
         )
@@ -106,8 +130,8 @@ class TorchNFM(nn.Module):
         deep_logit = self.mlp(bi_interaction).squeeze(1)
         linear_logit = torch.stack(
             [
-                linear(field).squeeze(1)
-                for linear, field in zip(self.linear_terms, feature_fields, strict=False)
+                self.linear_terms[key](field).squeeze(1)
+                for key, field in zip(self.field_keys, feature_fields, strict=False)
             ],
             dim=0,
         ).sum(dim=0)
@@ -138,7 +162,7 @@ def train_nfm(
 
     print("NFM fields:")
     for name, dim in zip(field_names, field_dims, strict=False):
-        print(f"  {name}: {dim}")
+        print(f"  {name}: input_dim={dim} -> projected_dim={field_embedding_dim}")
 
     train_dataset = FieldFeatureDataset(train_feature_fields, train_labels)
     test_dataset = FieldFeatureDataset(test_feature_fields)
@@ -150,6 +174,7 @@ def train_nfm(
     model = TorchNFM(
         field_dims=field_dims,
         field_embedding_dim=field_embedding_dim,
+        field_names=field_names,
         hidden_units=hidden_units,
         dropout=dropout,
     ).to(device)

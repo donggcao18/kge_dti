@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
+from sklearn.decomposition import PCA
 from sklearn.preprocessing import MinMaxScaler
 
 from constants import TRIPLE_COLUMNS
@@ -23,6 +24,14 @@ from kge import pair_embedding_blocks, require_entities, score_triples, train_co
 from metrics_utils import pr_auc, roc_auc
 from nfm import train_nfm
 from utils import ensure_output_dirs, parse_hidden_units, resolve_device, set_seed
+
+
+DEFAULT_NFM_FIELDS = (
+    "drug_kg_embedding",
+    "protein_kg_embedding",
+    "drug_morgan_fingerprint",
+    "protein_ctd_descriptor",
+)
 
 
 def print_args(args: argparse.Namespace, data_root: Path, device: str) -> None:
@@ -50,6 +59,32 @@ def scale_feature_fields(
     train_scaled = [train_all[:, offsets[index] : offsets[index + 1]] for index in range(len(field_dims))]
     test_scaled = [test_all[:, offsets[index] : offsets[index + 1]] for index in range(len(field_dims))]
     return train_scaled, test_scaled
+
+
+def apply_pca_if_requested(
+    train_features: np.ndarray,
+    test_features: np.ndarray,
+    components: int,
+    feature_name: str,
+) -> tuple[np.ndarray, np.ndarray]:
+    if components <= 0:
+        return train_features, test_features
+
+    n_components = min(components, train_features.shape[0], train_features.shape[1])
+    if n_components < components:
+        print(f"{feature_name} PCA components reduced from {components} to {n_components}.")
+
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    train_scaled = scaler.fit_transform(train_features)
+    test_scaled = scaler.transform(test_features)
+    pca = PCA(n_components=n_components)
+    train_pca = pca.fit_transform(train_scaled).astype(np.float32)
+    test_pca = pca.transform(test_scaled).astype(np.float32)
+    print(
+        f"{feature_name} PCA: {train_features.shape[1]} -> {n_components} "
+        f"components, explained_variance={pca.explained_variance_ratio_.sum():.4f}"
+    )
+    return train_pca, test_pca
 
 
 def run_fold(
@@ -115,6 +150,18 @@ def run_fold(
     test_pairs = test[TRIPLE_COLUMNS]
     train_drug_kge, train_protein_kge = pair_embedding_blocks(kge_model, triples_factory, train_pairs, device)
     test_drug_kge, test_protein_kge = pair_embedding_blocks(kge_model, triples_factory, test_pairs, device)
+    train_drug_kge, test_drug_kge = apply_pca_if_requested(
+        train_drug_kge,
+        test_drug_kge,
+        args.kge_pca_components,
+        "drug KGE embedding",
+    )
+    train_protein_kge, test_protein_kge = apply_pca_if_requested(
+        train_protein_kge,
+        test_protein_kge,
+        args.kge_pca_components,
+        "protein KGE embedding",
+    )
     train_descriptor_fields = merge_feature_blocks(
         train_pairs,
         drug_df,
@@ -132,9 +179,9 @@ def run_fold(
 
     train_feature_fields = [train_drug_kge, train_protein_kge, *train_descriptor_fields]
     test_feature_fields = [test_drug_kge, test_protein_kge, *test_descriptor_fields]
-    field_names = ["drug_kg_embedding", "protein_kg_embedding", "drug_descriptor"]
+    field_names = ["drug_kg_embedding", "protein_kg_embedding", "drug_morgan_fingerprint"]
     if not args.drug_features_only:
-        field_names.append("protein_descriptor")
+        field_names.append("protein_ctd_descriptor")
     if args.include_kge_score_feature:
         train_kge_scores = score_triples(
             kge_model,
@@ -146,6 +193,11 @@ def run_fold(
         train_feature_fields.append(train_kge_scores)
         test_feature_fields.append(kge_scores.reshape(-1, 1))
         field_names.append("kge_score")
+
+    if tuple(field_names) == DEFAULT_NFM_FIELDS:
+        print("Using default 4-field KGE_NFM input: drug KGE, protein KGE, drug fingerprint, protein descriptor.")
+    else:
+        print(f"Using non-default NFM fields: {', '.join(field_names)}")
 
     train_feature_fields, test_feature_fields = scale_feature_fields(train_feature_fields, test_feature_fields)
 
@@ -229,6 +281,12 @@ def parse_args() -> argparse.Namespace:
         help="Append the KGE triple score as an extra dense feature for the NFM predictor.",
     )
     parser.add_argument("--protein-pca-components", type=int, default=100)
+    parser.add_argument(
+        "--kge-pca-components",
+        type=int,
+        default=0,
+        help="Apply PCA to drug and protein KGE embeddings before NFM. Use 0 to keep raw KGE embeddings.",
+    )
     parser.add_argument("--kge-lr", type=float, default=1e-3)
     parser.add_argument("--kge-num-negs", type=int, default=1)
     parser.add_argument("--compgcn-layers", type=int, default=1, help="Number of CompGCN message-passing layers.")

@@ -16,6 +16,7 @@ python src/kge_nfm.py \
   --folds 5 \
   --device auto \
   --embedding-dim 400 \
+  --kge-pca-components 200 \
   --kge-epochs 50 \
   --nfm-epochs 200 \
   --kge-batch-size 8192 \

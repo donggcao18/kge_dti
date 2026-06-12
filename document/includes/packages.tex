@@ -1,0 +1,58 @@
+% Core packages for the project report.
+
+\usepackage[left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{ragged2e}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{titlesec}
+\usepackage{listings}
+
+\usepackage[
+    colorlinks=true,
+    urlcolor=blue,
+    citecolor=blue,
+    linkcolor=blue,
+    pdfusetitle,
+    plainpages=false
+]{hyperref}
+\usepackage[open,openlevel=1]{bookmark}
+
+\definecolor{codebackground}{HTML}{F7F7F7}
+\definecolor{codeframe}{HTML}{D9DEE8}
+\definecolor{codekeyword}{HTML}{164A9B}
+\definecolor{codecomment}{HTML}{4B7F40}
+\definecolor{codestring}{HTML}{9B3A34}
+
+\lstdefinestyle{reportcode}{
+    backgroundcolor=\color{codebackground},
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{codekeyword}\bfseries,
+    commentstyle=\color{codecomment},
+    stringstyle=\color{codestring},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=8pt,
+    frame=single,
+    rulecolor=\color{codeframe},
+    breaklines=true,
+    breakatwhitespace=false,
+    showstringspaces=false,
+    tabsize=4,
+    captionpos=b
+}
+\lstset{style=reportcode}

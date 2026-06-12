@@ -1,0 +1,232 @@
+\chapter{Introduction}
+\label{chap:introduction}
+
+\section{Background}
+
+Drug discovery is a long and expensive process in which a large number of
+candidate molecules must be screened before a small subset can proceed to
+experimental and clinical validation. One of the central questions in this
+process is whether a drug molecule can interact with a biological target, such
+as a protein, enzyme, receptor, or gene product. These drug--target
+interactions (DTIs) provide important evidence for understanding therapeutic
+mechanisms, identifying potential side effects, and discovering new uses for
+existing drugs.
+
+Traditional experimental methods for identifying DTIs are reliable but costly.
+They require domain expertise, laboratory resources, and substantial time. As a
+result, computational DTI prediction has become an important research direction
+in bioinformatics and machine learning. Instead of testing every possible
+drug--target pair experimentally, computational models estimate which pairs are
+most likely to interact. These predictions can then be used to prioritize
+candidate interactions for further biological validation.
+
+Early computational approaches often represented the DTI problem as a
+relationship between two spaces: the chemical space of drugs and the genomic or
+biological space of target proteins. For example, the benchmark work of
+Yamanishi et al. modeled DTI prediction by integrating chemical similarity and
+genomic similarity information \cite{yamanishi2008prediction}. This view is
+still influential because it frames DTI prediction as a supervised learning
+problem over pairs of heterogeneous entities.
+
+However, modern biomedical data is no longer limited to pairwise drug and
+protein descriptors. Drugs, proteins, diseases, pathways, side effects, and
+biological processes are connected through many relation types. These
+relationships naturally form a biomedical knowledge graph. A knowledge graph
+can provide context that is difficult to capture from isolated descriptors
+alone. For example, two drugs may not appear similar by molecular fingerprint,
+but they may be connected to similar diseases, pathways, or protein families in
+the graph. Likewise, two proteins may share functional context even when their
+sequence-level descriptors are not sufficient.
+
+This project studies a machine learning pipeline that uses both descriptor
+features and knowledge graph representation learning. The first part of the
+pipeline learns entity representations from biomedical graph triples using
+knowledge graph embedding (KGE) models. The second part combines these learned
+representations with drug and protein descriptors and trains a neural
+factorization machine (NFM) for final DTI classification.
+
+\section{Problem Context}
+
+The DTI prediction task can be formulated as a binary prediction problem. Given
+a drug $d$ and a target protein $t$, the model predicts whether the pair
+$(d,t)$ represents a true interaction. Let $\mathcal{D}$ denote the set of
+drugs and $\mathcal{T}$ denote the set of target proteins. Each observed pair is
+associated with a label:
+
+\begin{equation}
+    y_{dt} =
+    \begin{cases}
+        1, & \text{if drug } d \text{ is known to interact with target } t, \\
+        0, & \text{otherwise.}
+    \end{cases}
+\end{equation}
+
+The objective is to learn a scoring function:
+
+\begin{equation}
+    f_{\theta}: \mathcal{D} \times \mathcal{T} \rightarrow [0,1],
+\end{equation}
+
+where $f_{\theta}(d,t)$ estimates the probability that drug $d$ interacts with
+target $t$. A higher score indicates that the model considers the pair more
+likely to be a valid interaction.
+
+Although this formulation is simple, the task is challenging in practice. First,
+known DTI data is sparse compared with the number of possible drug--target
+pairs. Second, many unobserved pairs are not guaranteed to be true negatives;
+they may simply be unknown interactions. Third, the model must combine
+heterogeneous information sources, including chemical features, protein
+features, and relational graph structure. Finally, the task becomes harder under
+cold-start settings, where the model must predict interactions for drugs or
+proteins that have limited observed interaction history.
+
+\section{Motivation}
+
+The main motivation of this project is to improve DTI prediction by combining
+two complementary sources of information: descriptor-based features and
+knowledge graph embeddings.
+
+Descriptor features provide direct information about the entities. Drug
+descriptors may encode molecular structure, chemical fingerprints, or other
+compound-level properties. Protein descriptors may encode sequence-derived
+features or biological properties. These features are useful because they give
+the supervised classifier explicit information about the drug and target in each
+candidate pair.
+
+Knowledge graph embeddings provide relational information. KGE models learn
+dense vector representations of entities and relations from graph triples of
+the form $(h,r,t)$, where $h$ is a head entity, $r$ is a relation type, and $t$
+is a tail entity. A simple model such as DistMult can efficiently learn entity
+and relation embeddings through a bilinear scoring function
+\cite{yang2015embedding}. However, DistMult has limited expressiveness because
+its scoring function is symmetric and does not explicitly aggregate
+neighborhood structure.
+
+More expressive graph representation models, such as CompGCN, address part of
+this limitation by performing relation-aware message passing over
+multi-relational graphs \cite{vashishth2020composition}. This is especially
+relevant for biomedical data because a drug or protein is often better
+understood through its surrounding graph context rather than through isolated
+pairwise relations.
+
+After graph representations are obtained, the remaining challenge is how to use
+them effectively in the supervised prediction stage. Neural factorization
+machines are designed to model feature interactions in sparse predictive
+settings \cite{he2017neural}. This makes NFM a suitable candidate for combining
+drug identifiers, target identifiers, descriptor features, and graph-derived
+embeddings. In this project, the NFM component is used as the final classifier
+that learns interaction patterns from the constructed pair-level features.
+
+\section{Research Gap}
+
+Many DTI prediction methods rely mainly on handcrafted descriptors or similarity
+matrices. These methods can be effective when high-quality descriptors are
+available, but they may fail to exploit broader relational structure. On the
+other hand, graph-based methods can capture biomedical context, but graph
+embeddings alone may not fully represent the chemical and biological properties
+of individual drugs and proteins.
+
+This project is motivated by the gap between these two perspectives. A
+descriptor-only model may miss relational evidence, while a graph-only model may
+ignore useful entity-level features. Therefore, a hybrid pipeline is explored:
+KGE models learn representations from biomedical knowledge graphs, and an NFM
+model combines those representations with descriptor features for supervised DTI
+prediction.
+
+The project also compares different KGE choices. DistMult is treated as a
+lightweight baseline because it is efficient and widely used. CompGCN is
+considered as a stronger relational graph encoder because it can incorporate
+neighborhood information and jointly update entity and relation representations.
+This comparison helps clarify whether more expressive graph representation
+learning improves the downstream DTI prediction task.
+
+\section{Objectives}
+
+The main objective of this project is to develop and evaluate a reproducible
+machine learning pipeline for drug--target interaction prediction using
+knowledge graph embeddings and neural factorization machines.
+
+The specific objectives are:
+
+\begin{itemize}
+    \item to study DTI prediction as a supervised binary classification problem;
+
+    \item to preprocess benchmark DTI datasets and biomedical knowledge graph
+    triples for model training;
+
+    \item to train KGE models, including DistMult and CompGCN, for learning
+    drug and protein representations;
+
+    \item to construct pair-level features by combining descriptor features and
+    graph-derived embeddings;
+
+    \item to train an NFM classifier for final interaction prediction;
+
+    \item to evaluate the model using ROC-AUC and PR-AUC across selected
+    datasets and data splits;
+
+    \item to compare the proposed KGE-NFM pipeline with relevant baseline
+    approaches.
+\end{itemize}
+
+\section{Scope of the Project}
+
+This project focuses on computational prediction rather than experimental
+validation. The model outputs probability scores for candidate drug--target
+pairs, but these predictions should be interpreted as prioritization signals
+rather than confirmed biological interactions.
+
+The current implementation supports datasets such as \textit{Yamanishi08},
+\textit{BioKG}, and \textit{Hetionet}. The main pipeline is implemented in
+Python using PyTorch for neural model training and PyKEEN for knowledge graph
+embedding models.
+
+\begin{description}
+    \item[In scope:] dataset loading, preprocessing, KGE training, entity
+    embedding extraction, feature construction, NFM training, baseline
+    comparison, and metric reporting.
+
+    \item[Out of scope:] wet-lab validation, clinical validation, deployment of
+    a production drug discovery platform, and detailed biological mechanism
+    interpretation of each predicted interaction.
+\end{description}
+
+\section{Expected Contributions}
+
+The expected contributions of this project are:
+
+\begin{itemize}
+    \item a clear implementation of a KGE-NFM pipeline for DTI prediction;
+
+    \item an experimental comparison between lightweight and more expressive KGE
+    models in the downstream DTI setting;
+
+    \item an evaluation framework using fold-based prediction outputs, ROC
+    curves, PR curves, and aggregate AUC metrics;
+
+    \item a reusable report and code structure for future experiments on
+    biomedical graph-based prediction tasks.
+\end{itemize}
+
+\section{Report Organization}
+
+The rest of this report is organized as follows.
+
+\begin{table}[H]
+\centering
+\caption{Report organization}
+\label{tab:report_organization}
+\begin{tabular}{cl}
+\toprule
+\textbf{Chapter} & \textbf{Main content} \\
+\midrule
+Chapter 1 & Background, motivation, objectives, scope, and contributions \\
+Chapter 2 & Dataset description, problem analysis, and preprocessing \\
+Chapter 3 & Technologies, tools, and implementation environment \\
+Chapter 4 & Methodology and model design \\
+Chapter 5 & Experiments, evaluation, results, and discussion \\
+Chapter 6 & Conclusion, limitations, and future work \\
+\bottomrule
+\end{tabular}
+\end{table}
+

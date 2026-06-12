@@ -1,0 +1,58 @@
+% !TeX spellcheck = en_US
+\documentclass[12pt, a4paper, openany]{book}
+
+\usepackage[utf8]{inputenc}
+% \usepackage[vietnamese]{babel}
+
+\setlength{\belowcaptionskip}{-6pt}
+\setlength{\intextsep}{10pt plus 2pt minus 2pt}
+\setlength{\parskip}{0.5\baselineskip}
+\setlength{\parindent}{0pt}
+
+\newcommand{\doctitle}{\textbf{PROJECT REPORT}}
+
+\input{includes/teacher-info}
+\input{includes/course-info}
+\input{includes/packages}
+\input{includes/custom-commands}
+\input{includes/metadata}
+
+\hypersetup{hidelinks}
+\setlength{\headheight}{20pt}
+\addtolength{\topmargin}{-8pt}
+
+\begin{document}
+
+\raggedbottom
+\frontmatter
+\thispagestyle{empty}
+\input{includes/document-header}
+
+\clearpage
+\tableofcontents
+
+\clearpage
+\phantomsection
+\addcontentsline{toc}{chapter}{List of Figures}
+\listoffigures
+
+\clearpage
+\phantomsection
+\addcontentsline{toc}{chapter}{List of Tables}
+\listoftables
+
+\mainmatter
+\justifying
+
+\input{content/Chapter1}
+\input{content/Chapter2}
+\input{content/Chapter3}
+\input{content/Chapter4}
+\input{content/Chapter5}
+\input{content/Chapter6}
+
+\backmatter
+\bibliographystyle{plain}
+\bibliography{Refs/references}
+
+\end{document}

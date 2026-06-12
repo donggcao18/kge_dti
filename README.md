@@ -28,9 +28,28 @@ Install the current PyTorch path with:
 pip install -r requirements.txt
 ```
 
+The implementation uses the PyTorch wheel build for NVIDIA CUDA 12.1
+(`cu121`). To install the PyTorch packages directly from the official CUDA
+12.1 wheel index, run:
+
+```bash
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+```
+
+In a Jupyter or Colab notebook, the equivalent command is:
+
+```python
+!pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+```
+
+This command specifies the CUDA build (`cu121`) but does not pin a numeric
+PyTorch release. The installed `torch`, `torchvision`, and `torchaudio`
+versions therefore depend on the compatible packages available from the CUDA
+12.1 index at installation time.
+
 `requirements.txt` currently uses:
 
-- PyTorch / TorchVision / TorchAudio from the CUDA 12.1 PyTorch wheel index
+- PyTorch / TorchVision / TorchAudio from the CUDA 12.1 (`cu121`) wheel index
 - `pykeen >= 1.10, < 1.12`
 - `numpy >= 2.0, < 3`
 - `pandas == 2.2.2`

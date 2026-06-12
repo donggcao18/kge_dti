@@ -1,0 +1,151 @@
+\chapter{Implementation, Experiments, and Evaluation}
+\label{chap:experiments}
+
+\section{Implementation Overview}
+
+The main experiment runner is implemented in \texttt{src/kge\_nfm.py}. For each
+fold, the runner loads data, trains or prepares the KGE model, extracts pair
+features, trains the NFM classifier, evaluates predictions, and writes output
+artifacts.
+
+\section{Experiment Workflow}
+
+The experiment workflow is:
+
+\begin{enumerate}
+    \item parse command-line arguments;
+    \item set random seed and select computation device;
+    \item load dataset specification and fold files;
+    \item load descriptor features and knowledge graph triples;
+    \item train the selected KGE model;
+    \item compute KGE scores and entity embeddings;
+    \item construct train and test feature matrices;
+    \item train the NFM classifier;
+    \item compute ROC-AUC and PR-AUC;
+    \item save predictions, metric curves, and model checkpoints.
+\end{enumerate}
+
+\section{Evaluation Metrics}
+
+\subsection{ROC-AUC}
+
+ROC-AUC measures how well the model ranks positive interactions above negative
+or unknown interactions across all classification thresholds.
+
+\subsection{PR-AUC}
+
+PR-AUC summarizes the precision-recall curve. This metric is especially useful
+for DTI prediction because positive interactions are usually sparse.
+
+\section{Baselines}
+
+% TODO: Add the actual baselines evaluated in this project.
+
+\begin{table}[H]
+\centering
+\caption{Baseline models}
+\label{tab:baseline_models}
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Model} & \textbf{Description} \\
+\midrule
+Descriptor-only classifier & Uses drug and protein descriptors without KGE features \\
+Standalone KGE score & Uses only KGE interaction scores for prediction \\
+KGE + Random Forest & Uses KGE features with a random forest classifier \\
+KGE + XGBoost & Uses KGE features with an XGBoost classifier \\
+KGE + NFM & Proposed model combining embeddings, descriptors, and NFM \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Experimental Setup}
+
+% TODO: Replace placeholder values with final experiment settings.
+
+\begin{table}[H]
+\centering
+\caption{Experiment setup}
+\label{tab:experiment_setup}
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Item} & \textbf{Setting} \\
+\midrule
+Dataset & Yamanishi08 / BioKG / Hetionet \\
+Split & warm\_start\_1\_10 / cold-start split \\
+Number of folds & 10 \\
+Random seed & 42 \\
+Device & CPU / CUDA GPU \\
+Output directory & \texttt{output/kge\_nfm\_torch} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Main Results}
+
+% TODO: Fill this table using the final output CSV files.
+
+\begin{table}[H]
+\centering
+\caption{Main DTI prediction results}
+\label{tab:main_results}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Model} & \textbf{ROC-AUC} & \textbf{PR-AUC} &
+\textbf{ROC-AUC Std.} & \textbf{PR-AUC Std.} \\
+\midrule
+Descriptor-only classifier & -- & -- & -- & -- \\
+Standalone KGE & -- & -- & -- & -- \\
+KGE + Random Forest & -- & -- & -- & -- \\
+KGE + XGBoost & -- & -- & -- & -- \\
+KGE + NFM & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Ablation Study}
+
+An ablation study helps measure the contribution of each feature source or
+model component.
+
+\begin{table}[H]
+\centering
+\caption{Ablation study template}
+\label{tab:ablation_study}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Configuration} & \textbf{ROC-AUC} & \textbf{PR-AUC} \\
+\midrule
+Descriptors only & -- & -- \\
+KGE embeddings only & -- & -- \\
+Descriptors + KGE embeddings & -- & -- \\
+Full KGE + NFM pipeline & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Discussion}
+
+% TODO: Discuss the final results. Suggested points:
+% - Does KGE improve over descriptor-only baselines?
+% - Does NFM improve over classical classifiers?
+% - Are ROC-AUC and PR-AUC consistent?
+% - Which split is hardest and why?
+
+\section{Error Analysis}
+
+% TODO: Add analysis of false positives and false negatives. Consider whether
+% errors are concentrated around rare drugs, rare proteins, missing KG entities,
+% or cold-start cases.
+
+\section{Limitations}
+
+The current project has several expected limitations:
+
+\begin{itemize}
+    \item negative labels may include unknown positive interactions;
+    \item knowledge graph coverage may be incomplete for some entities;
+    \item cold-start prediction is more difficult than warm-start prediction;
+    \item hyperparameter search may be limited by available computation;
+    \item model predictions require biological validation before practical use.
+\end{itemize}
+

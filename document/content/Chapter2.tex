@@ -1,315 +1,196 @@
-\chapter{Data and Problem Analysis}
-\label{chap:data}
+\chapter{Background and Related Work}
+\label{chap:background_related_work}
 
-\section{Dataset Overview}
+\section{Drug--Target Interaction Prediction}
 
-This project studies drug--target interaction (DTI) prediction using benchmark
-biomedical data. The main dataset used for exploratory analysis and baseline
-experiments is \textit{Yamanishi08}. This dataset is suitable for the project
-because it provides a gold-standard DTI network together with drug structure
-features, protein sequence features, predefined cross-validation folds, and
-knowledge graph triples.
+\subsection{Problem Definition}
 
-The dataset can be viewed as a heterogeneous learning problem. On one side, the
-DTI labels define a bipartite graph between drugs and target proteins. On the
-other side, auxiliary feature sources describe the properties and biomedical
-context of these entities. The goal of the machine learning model is to combine
-these sources and predict whether a candidate drug--target pair represents an
-interaction.
+Drug--target interaction (DTI) prediction aims to determine whether a drug
+$d$ interacts with a protein target $p$. Each candidate pair has a binary
+label:
 
-\begin{table}[H]
-\centering
-\caption{Main data sources in the Yamanishi08 dataset}
-\label{tab:yamanishi_data_sources}
-\begin{tabularx}{\textwidth}{lX}
-\toprule
-\textbf{File or folder} & \textbf{Description} \\
-\midrule
-\texttt{dt\_all\_08.txt} & Gold-standard positive DTI pairs. \\
-\texttt{791drug\_struc.csv} & Drug identifiers and SMILES strings. \\
-\texttt{morganfp.txt} & 1024-dimensional Morgan fingerprints for drugs. \\
-\texttt{989proseq.csv} & Protein identifiers and amino acid sequences. \\
-\texttt{pro\_ctd.txt} & 147-dimensional CTD descriptors for proteins. \\
-\texttt{kg\_data/} & Biomedical knowledge graph triples. \\
-\texttt{data\_folds/} & Predefined 10-fold train/test splits. \\
-\bottomrule
-\end{tabularx}
-\end{table}
+\begin{equation}
+    y_{dp} \in \{0,1\},
+\end{equation}
+where $y_{dp}=1$ denotes a known interaction and $y_{dp}=0$ denotes an unknown
+or sampled negative interaction. A predictive model estimates:
 
-\section{Yamanishi08 DTI Network}
+\begin{equation}
+    \hat{y}_{dp}=F(d,p),
+\end{equation}
+where $\hat{y}_{dp}$ is the predicted probability of interaction.
 
-The file \texttt{dt\_all\_08.txt} defines the positive DTI network. Each row
-contains a drug identifier, the relation type \texttt{DRUG\_TARGET}, and a
-target protein identifier. Drug identifiers follow KEGG drug-style notation
-such as \texttt{D00002}, while target identifiers follow KEGG gene-style
-notation such as \texttt{hsa:10}.
+Computational DTI prediction supports drug repurposing, target identification,
+virtual screening, and the investigation of off-target effects. Since
+experimentally verified interactions represent only a small fraction of all
+possible drug--protein pairs, the task is naturally sparse and imbalanced.
 
-\begin{table}[H]
-\centering
-\caption{Yamanishi08 DTI network statistics}
-\label{tab:yamanishi_dti_stats}
-\begin{tabular}{lr}
-\toprule
-\textbf{Statistic} & \textbf{Value} \\
-\midrule
-Known positive interactions & 5,127 \\
-Unique drugs & 791 \\
-Unique target proteins & 989 \\
-Possible drug--target pairs & 782,299 \\
-Interaction matrix density & 0.6554\% \\
-Interaction matrix sparsity & 99.3446\% \\
-Average targets per drug & 6.48 \\
-Average drugs per target & 5.18 \\
-\bottomrule
-\end{tabular}
-\end{table}
+\subsection{Challenges in DTI Prediction}
 
-The interaction matrix is extremely sparse. Among 782,299 possible
-drug--target pairs, only 5,127 are observed as positive interactions. This
-means that most possible pairs are unobserved. In the supervised learning folds,
-unobserved pairs are sampled as negative examples, but this should be interpreted
-carefully: an unobserved pair is not always a biologically confirmed negative.
-It may simply be an interaction that has not yet been reported.
+The first challenge is incomplete supervision. Unobserved pairs are commonly
+sampled as negative examples, although some may correspond to interactions
+that have not yet been experimentally confirmed. The second challenge is the
+heterogeneity of biomedical evidence. Drug structure, protein sequence,
+pathways, diseases, side effects, and functional annotations provide
+complementary information but differ substantially in representation and
+scale.
 
-\section{Degree Distribution and Network Sparsity}
+An effective DTI framework should therefore integrate structural information
+with relational biomedical context. It should also model interactions between
+drug and protein features rather than treating each feature source
+independently.
 
-The DTI graph is not uniformly connected. Most drugs and proteins have only a
-small number of known interactions, while a small number of entities act as
-hubs. In the Yamanishi08 network, 588 out of 791 drugs have at most five known
-target proteins. This accounts for 74.34\% of all drugs. Similarly, 544 out of
-989 target proteins interact with at most two drugs, accounting for 55.01\% of
-all targets.
+\subsection{Warm-Start Evaluation Settings}
 
-\begin{table}[H]
-\centering
-\caption{Low-degree entity statistics}
-\label{tab:degree_sparsity}
-\begin{tabular}{lrrr}
-\toprule
-\textbf{Entity type} & \textbf{Condition} & \textbf{Count} & \textbf{Percentage} \\
-\midrule
-Drugs & Degree $\leq 5$ & 588 / 791 & 74.34\% \\
-Target proteins & Degree $\leq 2$ & 544 / 989 & 55.01\% \\
-\bottomrule
-\end{tabular}
-\end{table}
+The current experiments use warm-start evaluation, in which the drugs and
+proteins represented in the test pairs are also available in the training
+data. The model is evaluated on unseen drug--protein combinations rather than
+entirely unseen entities. Two positive-to-negative class ratios are used.
 
-This heavy-tailed structure has two important implications. First, models can
-learn more reliable patterns for highly connected drugs and targets because
-more interaction evidence is available. Second, prediction for low-degree
-entities is more difficult because the model must rely more heavily on
-descriptor features and graph context rather than direct interaction history.
+The warm-start 1:1 setting contains one positive interaction for each sampled
+negative interaction. This balanced setting provides a controlled assessment
+of model discrimination. The warm-start 1:10 setting contains one positive
+interaction for every ten sampled negative interactions. This setting more
+closely reflects DTI sparsity, where known interactions form only a small
+fraction of all possible pairs. Both ROC-AUC and PR-AUC are reported, with
+PR-AUC being particularly informative under the imbalanced 1:10 setting.
 
-\begin{table}[H]
-\centering
-\caption{Top hub entities in the Yamanishi08 DTI network}
-\label{tab:dti_hubs}
-\begin{tabular}{lrlr}
-\toprule
-\textbf{Drug} & \textbf{Degree} & \textbf{Target} & \textbf{Degree} \\
-\midrule
-\texttt{D02356} & 132 & \texttt{hsa:5743} & 61 \\
-\texttt{D00528} & 113 & \texttt{hsa:5742} & 61 \\
-\texttt{D01441} & 98 & \texttt{hsa:6331} & 36 \\
-\texttt{D00294} & 83 & \texttt{hsa:154} & 35 \\
-\texttt{D00437} & 81 & \texttt{hsa:1576} & 34 \\
-\bottomrule
-\end{tabular}
-\end{table}
+\section{Biomedical Knowledge Graph Representation}
 
-\section{Drug Structure Features}
+\subsection{Biomedical Knowledge Graph Structure}
 
-Drug compounds are represented using two complementary sources. The file
-\path{791drug_struc.csv} stores the SMILES representation of each drug, and
-\path{morganfp.txt} stores the corresponding Morgan fingerprint vectors.
-Morgan fingerprints are binary molecular descriptors that encode local
-topological neighborhoods in the molecular graph.
+A biomedical knowledge graph is defined as:
 
-\begin{table}[H]
-\centering
-\caption{Drug structure and fingerprint statistics}
-\label{tab:drug_feature_stats}
-\begin{tabular}{lr}
-\toprule
-\textbf{Statistic} & \textbf{Value} \\
-\midrule
-Number of compounds & 791 \\
-Average SMILES length & 55.38 characters \\
-Minimum SMILES length & 11 characters \\
-Maximum SMILES length & 377 characters \\
-Morgan fingerprint shape & $791 \times 1024$ \\
-Average active bits per drug & 42.38 / 1024 \\
-Fingerprint matrix sparsity & 95.86\% \\
-\bottomrule
-\end{tabular}
-\end{table}
+\begin{equation}
+    \mathcal{G}
+    =
+    (\mathcal{E},\mathcal{R},\mathcal{T}),
+\end{equation}
+where $\mathcal{E}$ is the set of entities, $\mathcal{R}$ is the set of
+relation types, and $\mathcal{T}$ is the set of observed triples. Each triple
+is represented as:
 
-The fingerprint vectors are highly sparse: on average, only about 42 of the
-1024 bits are active for each drug. This sparsity is useful because the features
-are compact and interpretable as structural indicators. However, it also makes
-generalization difficult for unseen drugs. In a drug cold-start setting, a test
-drug may contain molecular substructures that are poorly represented in the
-training set, causing descriptor-only models to struggle.
+\begin{equation}
+    (h,r,t) \in \mathcal{T},
+\end{equation}
+where $h,t\in\mathcal{E}$ are the head and tail entities and
+$r\in\mathcal{R}$ is the relation type. The direction and type of an edge
+express the semantic role of the connected entities.
 
-\section{Protein Sequence Features}
+\subsection{Biomedical Entities and Relations}
 
-Target proteins are represented using amino acid sequences and CTD descriptors.
-The file \texttt{989proseq.csv} stores protein sequences, while
-\texttt{pro\_ctd.txt} stores 147-dimensional CTD descriptors. CTD features
-summarize the composition, transition, and distribution of amino acid groups
-under several physicochemical properties.
+Biomedical entities may include drugs, proteins, genes, diseases, pathways,
+side effects, biological processes, molecular functions, domains, and protein
+families. Relations may represent drug--target interactions, drug--disease
+associations, protein--protein interactions, protein--pathway associations,
+functional annotations, and domain membership.
 
-\begin{table}[H]
-\centering
-\caption{Protein sequence and CTD descriptor statistics}
-\label{tab:protein_feature_stats}
-\begin{tabular}{lr}
-\toprule
-\textbf{Statistic} & \textbf{Value} \\
-\midrule
-Number of target proteins & 989 \\
-Average sequence length & 625.72 residues \\
-Minimum sequence length & 83 residues \\
-Maximum sequence length & 5,038 residues \\
-CTD descriptor shape & $989 \times 147$ \\
-CTD value range & 0 to 100 \\
-\bottomrule
-\end{tabular}
-\end{table}
+This heterogeneous structure provides evidence beyond the observed DTI
+matrix. A drug may be characterized by its targets, diseases, side effects,
+and therapeutic classes, while a protein may be characterized by pathways,
+functions, domains, diseases, and interacting proteins.
 
-The CTD descriptor contains three groups of features. The composition and
-transition components are typically in the range $[0,1]$, while distribution
-features are expressed as positional percentages and can reach 100. This scale
-difference motivates normalization before training models that are sensitive to
-feature magnitude, especially neural networks and distance-based baselines.
+\subsection{General Knowledge Graph Embedding Principle}
 
-\section{Knowledge Graph Data}
+Knowledge graph embedding (KGE) maps entities and relations into a continuous
+vector space. A KGE model defines a scoring function:
 
-In addition to direct DTI labels and descriptor features, the dataset includes
-biomedical knowledge graph triples. These triples connect drugs, proteins, genes,
-pathways, functional annotations, domains, families, and other biological
-entities. The graph provides relational context that can be used by KGE models
-such as DistMult and CompGCN.
+\begin{equation}
+    f(h,r,t)
+\end{equation}
+that measures the plausibility of a triple. Training encourages observed
+triples to receive higher scores than implausible triples. The learned entity
+embeddings provide compact representations of relational context and can be
+used for link prediction or supplied to a downstream supervised model.
 
-\begin{table}[H]
-\centering
-\caption{Knowledge graph statistics}
-\label{tab:kg_stats}
-\begin{tabularx}{\textwidth}{lrrrX}
-\toprule
-\textbf{KG file} & \textbf{Triples} & \textbf{Entities} &
-\textbf{Relations} & \textbf{Main context} \\
-\midrule
-\texttt{kegg\_kg.txt} & 59,222 & 16,337 & 35 & KEGG pathways and genes \\
-\texttt{yamanishi\_uniprot\_kg.txt} & 36,450 & 10,573 & 13 & UniProt annotations \\
-\midrule
-Combined KG & 95,672 & 25,487 & 48 & Biomedical graph context \\
-\bottomrule
-\end{tabularx}
-\end{table}
+\subsection{Triple Scoring and Negative Sampling}
 
-The KEGG graph is dominated by pathway, gene, drug, compound, motif, and BRITE
-relations. The UniProt-derived graph adds protein-centric context such as
-biological process, cellular component, molecular function, protein pathway,
-domain, family, and interaction relations. This motivates using knowledge graph
-representation learning: the model can embed drugs and proteins according to
-their wider biomedical neighborhoods, not only according to direct DTI labels.
+For each positive triple $(h,r,t)$, corrupted triples can be generated by
+replacing the head or tail entity:
 
-\section{Cross-Validation Splits}
+\begin{equation}
+    (h,r,t)
+    \rightarrow
+    (h',r,t),
+    \qquad
+    (h,r,t)
+    \rightarrow
+    (h,r,t').
+\end{equation}
 
-The dataset provides predefined 10-fold splits under four evaluation settings.
-These settings are designed to test different levels of generalization.
+A margin-based ranking objective separates observed and corrupted triples:
 
-\begin{table}[H]
-\centering
-\caption{Average fold composition across 10 folds}
-\label{tab:fold_composition}
-\small
-\begin{tabular}{lrrrr}
-\toprule
-\textbf{Split} & \textbf{Train n} & \textbf{Test n} &
-\textbf{Train +} & \textbf{Test +} \\
-\midrule
-Warm-start 1:10 & 44,864.2 & 5,538.9 & 4,615.0 & 512.0 \\
-Warm-start 1:1 & 9,164.1 & 1,022.9 & 4,615.0 & 512.0 \\
-Protein cold-start & 48,142.7 & 1,678.6 & 4,972.9 & 154.1 \\
-Drug cold-start & 44,414.4 & 5,102.5 & 4,621.5 & 505.5 \\
-\bottomrule
-\end{tabular}
-\end{table}
+\begin{equation}
+    \mathcal{L}_{KGE}
+    =
+    \sum_{(h,r,t)\in\mathcal{T}^{+}}
+    \sum_{(h',r,t')\in\mathcal{T}^{-}}
+    \max
+    \left(
+        0,
+        \gamma
+        +f(h',r,t')
+        -f(h,r,t)
+    \right),
+    \label{eq:background_kge_loss}
+\end{equation}
+where $\gamma$ is the margin, $\mathcal{T}^{+}$ contains observed triples,
+and $\mathcal{T}^{-}$ contains sampled corrupted triples.
 
-\begin{table}[H]
-\centering
-\caption{Average unique entity counts across evaluation splits}
-\label{tab:split_overlap}
-\small
-\begin{tabular}{lrrrr}
-\toprule
-\textbf{Split} & \textbf{Train D} & \textbf{Test D} &
-\textbf{Train T} & \textbf{Test T} \\
-\midrule
-Warm-start 1:10 & 791.0 & 223.9 & 989.0 & 985.2 \\
-Warm-start 1:1 & 791.0 & 223.9 & 989.0 & 581.1 \\
-Protein cold-start & 780.7 & 92.5 & 989.0 & 792.1 \\
-Drug cold-start & 685.7 & 105.3 & 989.0 & 984.4 \\
-\bottomrule
-\end{tabular}
-\end{table}
+\subsection{Role of KG Embeddings in DTI Prediction}
 
-The warm-start settings evaluate held-out pairs while allowing drugs and
-targets to appear in training. The 1:10 split is more imbalanced because it uses
-approximately ten negative examples per positive example, while the 1:1 split is
-approximately balanced.
+Within a DTI framework, KGE compresses graph context into drug and protein
+representations. For an entity $e$, the KGE stage produces:
 
-For cold-start analysis, it is important to distinguish all sampled pairs from
-positive interactions. In the drug cold-start split, positive test drugs do not
-appear in positive training pairs, making it a strict test of generalization to
-unseen drug structures. In the protein cold-start split, positive test targets
-do not overlap with positive training targets. However, because negative samples
-may contain many entities, counting all labeled pairs can still show entity
-overlap. Therefore, cold-start conclusions should be based on the intended
-positive-label partition rather than only raw entity overlap across all samples.
+\begin{equation}
+    \mathbf{z}_{e}
+    =
+    \operatorname{KGE}(e,\mathcal{G}).
+\end{equation}
 
-\section{Implications for Model Design}
+The embeddings $\mathbf{z}_{d}$ and $\mathbf{z}_{p}$ summarize the relational
+contexts of a candidate drug and protein. These embeddings can be combined
+with molecular and sequence descriptors in a downstream DTI model. This design
+is useful for low-degree entities, whose direct interaction evidence is
+limited but whose auxiliary biomedical relations remain informative.
 
-The exploratory analysis suggests several important design requirements for the
-proposed model:
+\section{Existing DTI Prediction Approaches}
 
-\begin{itemize}
-    \item \textbf{Handling sparsity:} The DTI matrix has only 0.6554\% observed
-    positive density, so the model must learn from sparse supervision.
+\subsection{Descriptor-Based Methods}
 
-    \item \textbf{Using descriptor features:} Low-degree drugs and proteins
-    have limited interaction history, making molecular fingerprints and CTD
-    descriptors important for generalization.
+Descriptor-based methods formulate DTI prediction as supervised classification
+over drug and protein features. Drugs are commonly represented by molecular
+fingerprints or chemical descriptors, while proteins are represented by
+sequence-derived descriptors. Classical classifiers and neural networks then
+learn a decision function from the combined pair representation.
 
-    \item \textbf{Using graph context:} The knowledge graph contains 95,672
-    triples and 48 relation types, providing relational evidence beyond direct
-    DTI labels.
+These methods are computationally practical and can generalize through
+structural similarity. However, they do not directly exploit heterogeneous
+biomedical relations such as disease associations, pathway membership, and
+protein--protein interactions.
 
-    \item \textbf{Supporting cold-start prediction:} Drug cold-start evaluation
-    is especially challenging because unseen molecular scaffolds can produce
-    out-of-distribution fingerprint patterns.
+\subsection{Network and Knowledge-Graph-Based Methods}
 
-    \item \textbf{Modeling feature interactions:} The final pair representation
-    combines sparse drug fingerprints, continuous protein descriptors, and dense
-    KGE embeddings. This motivates the use of an NFM classifier, which is
-    designed to capture interactions among heterogeneous features.
-\end{itemize}
+Network-based methods use the topology of drug, protein, disease, pathway, and
+other biomedical networks. Knowledge-graph-based methods extend this idea by
+representing multiple entity and relation types in a unified graph. KGE models
+then learn continuous representations that summarize relational compatibility
+and graph context.
 
-\section{Preprocessing Pipeline}
+These approaches provide information beyond direct DTI observations, but the
+quality of their representations depends on graph coverage, relation modeling,
+negative sampling, and the expressiveness of the selected encoder.
 
-The preprocessing pipeline prepares the data for KGE training and supervised
-DTI prediction:
+\subsection{Recommendation-Based Methods}
 
-\begin{enumerate}
-    \item load the DTI fold files from \texttt{data\_folds/};
-    \item load drug fingerprints and protein CTD descriptors;
-    \item normalize descriptor features where required;
-    \item load KG triples from KEGG and UniProt graph files;
-    \item train the selected KGE model on graph triples;
-    \item extract entity embeddings for drugs and target proteins;
-    \item merge drug descriptors, protein descriptors, and KGE embeddings into
-    pair-level feature vectors;
-    \item train and evaluate supervised classifiers on each fold.
-\end{enumerate}
+Recommendation-based methods interpret drugs and proteins as two interacting
+entity groups, analogous to users and items. Factorization models learn latent
+interaction patterns, while neural recommendation models capture nonlinear
+relationships among heterogeneous feature groups.
+
+The KGE-NFM framework combines the strengths of knowledge-graph and
+recommendation-based approaches \cite{ye2021unified}. KG embeddings provide
+relational biomedical representations, structural descriptors provide
+intrinsic drug and protein information, and NFM models interactions among
+these feature sources. Chapter~\ref{chap:methodology} specifies how this report
+implements KGE-NFM with two alternative KG encoders.

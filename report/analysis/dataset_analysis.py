@@ -2,95 +2,75 @@ from __future__ import annotations
 
 import argparse
 import json
-from dataclasses import dataclass
+import math
+import shutil
+from collections import Counter
 from pathlib import Path
-from typing import Iterable
 
 import numpy as np
 import pandas as pd
-
-try:
-    import matplotlib.pyplot as plt
-
-    HAS_MATPLOTLIB = True
-except ModuleNotFoundError:
-    plt = None
-    HAS_MATPLOTLIB = False
+from PIL import Image, ImageDraw, ImageFont
 
 
-TRIPLE_COLUMNS = ["head", "relation", "tail"]
-DEFAULT_SPLITS = ["warm_start_1_10", "warm_start_1_1", "protein_coldstart", "drug_coldstart"]
+DTI_COLUMNS = ["head", "relation", "tail"]
+WARM_START_SPLITS = {
+    "warm_start_1_1": "Warm-start 1:1",
+    "warm_start_1_10": "Warm-start 1:10",
+}
+COLORS = {
+    "drug": "#6C5CE7",
+    "target": "#D94F70",
+    "positive": "#168AAD",
+    "negative": "#F4A261",
+    "kg": "#2A9D8F",
+    "neutral": "#64748B",
+}
 
 
-@dataclass(frozen=True)
-class DatasetConfig:
-    name: str
-    root: Path
-    dti_path: Path
-    kg_paths: tuple[Path, ...]
-    drug_feature_path: Path | None
-    protein_feature_path: Path | None
-    drug_structure_path: Path | None = None
-    protein_sequence_path: Path | None = None
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Generate report-ready analysis for the Yamanishi08 DTI dataset."
+    )
+    parser.add_argument(
+        "--data-dir",
+        type=Path,
+        default=Path("data/yamanishi_08"),
+        help="Path to the Yamanishi08 directory.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("report/analysis/results/yamanishi_08"),
+        help="Directory for generated tables, figures, and the Markdown report.",
+    )
+    parser.add_argument("--dpi", type=int, default=240, help="PNG resolution.")
+    return parser.parse_args()
 
 
-def build_config(data_root: Path, dataset: str) -> DatasetConfig:
-    if dataset == "yamanishi_08":
-        root = data_root / dataset
-        return DatasetConfig(
-            name=dataset,
-            root=root,
-            dti_path=root / "dt_all_08.txt",
-            kg_paths=(
-                root / "kg_data" / "kegg_kg.txt",
-                root / "kg_data" / "yamanishi_uniprot_kg.txt",
-            ),
-            drug_feature_path=root / "morganfp.txt",
-            protein_feature_path=root / "pro_ctd.txt",
-            drug_structure_path=root / "791drug_struc.csv",
-            protein_sequence_path=root / "989proseq.csv",
-        )
-    if dataset == "BioKG":
-        root = data_root / dataset
-        return DatasetConfig(
-            name=dataset,
-            root=root,
-            dti_path=root / "dti.csv",
-            kg_paths=(root / "kg.csv",),
-            drug_feature_path=root / "fp_df.csv",
-            protein_feature_path=root / "prodes_df.csv",
-            drug_structure_path=root / "comp_struc.csv",
-            protein_sequence_path=root / "pro_seq.csv",
-        )
-    raise ValueError(f"Unsupported dataset: {dataset}")
-
-
-def ensure_dirs(dataset_out: Path) -> dict[str, Path]:
-    dirs = {
-        "root": dataset_out,
-        "figures": dataset_out / "figures",
-        "tables": dataset_out / "tables",
-    }
-    for path in dirs.values():
+def prepare_output(output_dir: Path) -> tuple[Path, Path]:
+    figures_dir = output_dir / "figures"
+    tables_dir = output_dir / "tables"
+    for path in (figures_dir, tables_dir):
+        if path.exists():
+            shutil.rmtree(path)
         path.mkdir(parents=True, exist_ok=True)
-    return dirs
+    return figures_dir, tables_dir
 
 
-def read_triples(path: Path) -> pd.DataFrame:
-    if not path.exists():
-        raise FileNotFoundError(path)
+def read_triples(path: Path, deduplicate: bool = True) -> pd.DataFrame:
+    frame = pd.read_csv(
+        path,
+        sep=r"\s+" if path.suffix.lower() == ".txt" else ",",
+        header=None,
+        names=DTI_COLUMNS,
+        usecols=[0, 1, 2],
+        dtype=str,
+    )
+    frame = frame.dropna().reset_index(drop=True)
+    return frame.drop_duplicates().reset_index(drop=True) if deduplicate else frame
 
-    sep = r"\s+" if path.suffix == ".txt" else ","
-    frame = pd.read_csv(path, sep=sep)
-    if set(TRIPLE_COLUMNS).issubset(frame.columns):
-        return frame[TRIPLE_COLUMNS].astype(str)
 
-    frame = pd.read_csv(path, sep=sep, header=None, usecols=[0, 1, 2])
-    frame.columns = TRIPLE_COLUMNS
-    return frame.astype(str)
-
-
-def save_csv(frame: pd.DataFrame, path: Path) -> None:
+def save_table(frame: pd.DataFrame, path: Path) -> None:
     frame.to_csv(path, index=False)
 
 
@@ -98,778 +78,980 @@ def save_json(data: dict, path: Path) -> None:
     path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
-def set_plot_style() -> None:
-    if not HAS_MATPLOTLIB:
-        return
-    plt.rcParams.update(
-        {
-            "figure.facecolor": "white",
-            "axes.facecolor": "white",
-            "axes.edgecolor": "#718096",
-            "axes.labelcolor": "#4A5568",
-            "xtick.color": "#718096",
-            "ytick.color": "#718096",
-            "grid.color": "#CBD5E0",
-            "font.size": 11,
-            "axes.titleweight": "bold",
-        }
+def load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    candidates = [
+        Path("C:/Windows/Fonts/arialbd.ttf" if bold else "C:/Windows/Fonts/arial.ttf"),
+        Path("C:/Windows/Fonts/calibrib.ttf" if bold else "C:/Windows/Fonts/calibri.ttf"),
+    ]
+    for path in candidates:
+        if path.exists():
+            return ImageFont.truetype(str(path), size=size)
+    return ImageFont.load_default()
+
+
+def text_size(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont) -> tuple[int, int]:
+    box = draw.textbbox((0, 0), text, font=font)
+    return box[2] - box[0], box[3] - box[1]
+
+
+def draw_centered(
+    draw: ImageDraw.ImageDraw,
+    center_x: float,
+    y: float,
+    text: str,
+    font: ImageFont.ImageFont,
+    fill: str = "#0F172A",
+) -> None:
+    width, _ = text_size(draw, text, font)
+    draw.text((center_x - width / 2, y), text, font=font, fill=fill)
+
+
+def make_canvas(width: int, height: int, title: str) -> tuple[Image.Image, ImageDraw.ImageDraw]:
+    image = Image.new("RGB", (width, height), "white")
+    draw = ImageDraw.Draw(image)
+    draw_centered(draw, width / 2, 24, title, load_font(30, bold=True))
+    return image, draw
+
+
+def save_image(image: Image.Image, path: Path, dpi: int) -> None:
+    image.save(path, format="PNG", dpi=(dpi, dpi), optimize=True)
+
+
+def draw_panel_axes(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+    title: str,
+    xlabel: str,
+    ylabel: str,
+) -> tuple[int, int, int, int]:
+    left, top, right, bottom = box
+    plot = (left + 78, top + 54, right - 24, bottom - 62)
+    x0, y0, x1, y1 = plot
+    draw_centered(draw, (left + right) / 2, top + 5, title, load_font(21, bold=True))
+    draw.text((x0, top + 34), ylabel, font=load_font(14), fill="#475569")
+    draw.line((x0, y1, x1, y1), fill="#475569", width=2)
+    draw.line((x0, y0, x0, y1), fill="#475569", width=2)
+    draw_centered(draw, (x0 + x1) / 2, bottom - 34, xlabel, load_font(16), "#334155")
+    return plot
+
+
+def draw_y_grid(
+    draw: ImageDraw.ImageDraw,
+    plot: tuple[int, int, int, int],
+    maximum: float,
+    formatter=lambda value: f"{value:.0f}",
+) -> None:
+    x0, y0, x1, y1 = plot
+    font = load_font(13)
+    for fraction in np.linspace(0, 1, 5):
+        y = y1 - fraction * (y1 - y0)
+        draw.line((x0, y, x1, y), fill="#D7E0E8", width=1)
+        label = formatter(maximum * fraction)
+        label_width, label_height = text_size(draw, label, font)
+        draw.text((x0 - label_width - 8, y - label_height / 2), label, font=font, fill="#64748B")
+
+
+def draw_histogram_panel(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+    values: np.ndarray,
+    title: str,
+    xlabel: str,
+    color: str,
+    log_y: bool = False,
+    bins: int = 30,
+) -> None:
+    plot = draw_panel_axes(
+        draw,
+        box,
+        title,
+        xlabel,
+        "Count (log)" if log_y else "Count",
+    )
+    x0, y0, x1, y1 = plot
+    counts, edges = np.histogram(values, bins=bins)
+    plotted = np.log10(counts + 1) if log_y else counts.astype(float)
+    maximum = max(float(plotted.max()), 1.0)
+    draw_y_grid(
+        draw,
+        plot,
+        maximum,
+        (lambda value: f"{int(round(10 ** value - 1))}") if log_y else (lambda value: f"{int(value)}"),
+    )
+    slot = (x1 - x0) / len(counts)
+    for index, value in enumerate(plotted):
+        bar_height = (y1 - y0) * float(value) / maximum
+        left = x0 + index * slot + 1
+        right = x0 + (index + 1) * slot - 1
+        draw.rectangle((left, y1 - bar_height, right, y1), fill=color)
+    tick_font = load_font(13)
+    draw.text((x0, y1 + 8), f"{edges[0]:.0f}", font=tick_font, fill="#64748B")
+    end_label = f"{edges[-1]:.0f}"
+    end_width, _ = text_size(draw, end_label, tick_font)
+    draw.text((x1 - end_width, y1 + 8), end_label, font=tick_font, fill="#64748B")
+
+
+def draw_bar_panel(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+    labels: list[str],
+    values: list[float],
+    title: str,
+    ylabel: str,
+    colors: list[str],
+    maximum: float | None = None,
+    percent: bool = False,
+) -> None:
+    plot = draw_panel_axes(draw, box, title, "", ylabel)
+    x0, y0, x1, y1 = plot
+    maximum = maximum or max(values) * 1.12 or 1.0
+    draw_y_grid(
+        draw,
+        plot,
+        maximum,
+        (lambda value: f"{value:.0f}%") if percent else (lambda value: f"{value:.0f}"),
+    )
+    group_width = (x1 - x0) / len(values)
+    label_font = load_font(14)
+    value_font = load_font(14, bold=True)
+    for index, (label, value) in enumerate(zip(labels, values)):
+        width = group_width * 0.52
+        center = x0 + (index + 0.5) * group_width
+        height = (y1 - y0) * value / maximum
+        draw.rounded_rectangle(
+            (center - width / 2, y1 - height, center + width / 2, y1),
+            radius=4,
+            fill=colors[index % len(colors)],
+        )
+        draw_centered(draw, center, y1 + 11, label, label_font, "#334155")
+        value_label = f"{value:.1f}%" if percent else f"{value:,.0f}"
+        draw_centered(draw, center, y1 - height - 24, value_label, value_font, "#334155")
+
+
+def gini(values: pd.Series | np.ndarray) -> float:
+    array = np.asarray(values, dtype=float)
+    array = array[np.isfinite(array)]
+    if array.size == 0 or np.all(array == 0):
+        return 0.0
+    array = np.sort(array)
+    index = np.arange(1, array.size + 1)
+    return float(
+        (2.0 * np.sum(index * array) / (array.size * np.sum(array)))
+        - (array.size + 1.0) / array.size
     )
 
 
-def svg_text(value: object) -> str:
-    text = str(value)
-    return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
+def concentration(values: pd.Series | np.ndarray, fraction: float = 0.10) -> float:
+    array = np.sort(np.asarray(values, dtype=float))[::-1]
+    if array.size == 0 or array.sum() == 0:
+        return 0.0
+    top_n = max(1, math.ceil(array.size * fraction))
+    return float(array[:top_n].sum() / array.sum())
 
 
-def write_svg(path: Path, body: str, width: int = 1200, height: int = 650) -> None:
-    path.write_text(
-        "\n".join(
-            [
-                f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
-                '<rect width="100%" height="100%" fill="white"/>',
-                body,
-                "</svg>",
-            ]
-        ),
-        encoding="utf-8",
-    )
+def entropy(counts: pd.Series | np.ndarray) -> tuple[float, float]:
+    array = np.asarray(counts, dtype=float)
+    probabilities = array[array > 0] / array.sum()
+    value = float(-(probabilities * np.log2(probabilities)).sum())
+    maximum = math.log2(len(probabilities)) if len(probabilities) > 1 else 0.0
+    return value, value / maximum if maximum else 0.0
 
 
-def svg_axes(x: int, y: int, w: int, h: int, title: str, xlabel: str, ylabel: str) -> str:
-    return f"""
-<text x="{x + w / 2:.1f}" y="{y - 25}" text-anchor="middle" font-size="22" font-weight="700" fill="#334155">{svg_text(title)}</text>
-<line x1="{x}" y1="{y + h}" x2="{x + w}" y2="{y + h}" stroke="#64748B" stroke-width="2"/>
-<line x1="{x}" y1="{y}" x2="{x}" y2="{y + h}" stroke="#64748B" stroke-width="2"/>
-<text x="{x + w / 2:.1f}" y="{y + h + 52}" text-anchor="middle" font-size="16" fill="#475569">{svg_text(xlabel)}</text>
-<text x="{x - 52}" y="{y + h / 2:.1f}" transform="rotate(-90 {x - 52} {y + h / 2:.1f})" text-anchor="middle" font-size="16" fill="#475569">{svg_text(ylabel)}</text>
-"""
+class UnionFind:
+    def __init__(self, nodes: set[str]) -> None:
+        self.parent = {node: node for node in nodes}
+        self.size = {node: 1 for node in nodes}
+
+    def find(self, node: str) -> str:
+        while self.parent[node] != node:
+            self.parent[node] = self.parent[self.parent[node]]
+            node = self.parent[node]
+        return node
+
+    def union(self, left: str, right: str) -> None:
+        left_root = self.find(left)
+        right_root = self.find(right)
+        if left_root == right_root:
+            return
+        if self.size[left_root] < self.size[right_root]:
+            left_root, right_root = right_root, left_root
+        self.parent[right_root] = left_root
+        self.size[left_root] += self.size[right_root]
 
 
-def svg_hist_panel(values: Iterable[float], x: int, y: int, w: int, h: int, title: str, xlabel: str, ylabel: str, color: str) -> str:
-    arr = np.asarray(list(values), dtype=float)
-    if arr.size == 0:
-        return ""
-    counts, edges = np.histogram(arr, bins=min(30, max(5, int(np.sqrt(arr.size)))))
-    max_count = max(int(counts.max()), 1)
-    body = [svg_axes(x, y, w, h, title, xlabel, ylabel)]
-    for i, count in enumerate(counts):
-        bar_w = w / len(counts) * 0.82
-        bx = x + i * (w / len(counts)) + (w / len(counts) - bar_w) / 2
-        bh = h * (count / max_count)
-        by = y + h - bh
-        body.append(f'<rect x="{bx:.1f}" y="{by:.1f}" width="{bar_w:.1f}" height="{bh:.1f}" fill="{color}" opacity="0.82" stroke="#334155" stroke-width="0.8"/>')
-    for tick in np.linspace(0, max_count, 5):
-        ty = y + h - h * (tick / max_count)
-        body.append(f'<line x1="{x}" y1="{ty:.1f}" x2="{x + w}" y2="{ty:.1f}" stroke="#CBD5E1" stroke-dasharray="5,5"/>')
-        body.append(f'<text x="{x - 8}" y="{ty + 4:.1f}" text-anchor="end" font-size="12" fill="#64748B">{int(tick)}</text>')
-    body.append(f'<text x="{x}" y="{y + h + 24}" text-anchor="start" font-size="12" fill="#64748B">{edges[0]:.0f}</text>')
-    body.append(f'<text x="{x + w}" y="{y + h + 24}" text-anchor="end" font-size="12" fill="#64748B">{edges[-1]:.0f}</text>')
-    return "\n".join(body)
+def connected_component_stats(dti: pd.DataFrame) -> dict[str, float | int]:
+    drug_nodes = {f"drug::{value}" for value in dti["head"]}
+    target_nodes = {f"target::{value}" for value in dti["tail"]}
+    union_find = UnionFind(drug_nodes | target_nodes)
+    for row in dti.itertuples(index=False):
+        union_find.union(f"drug::{row.head}", f"target::{row.tail}")
 
-
-def svg_horizontal_bars(path: Path, labels: list[str], values: list[float], title: str, color: str) -> None:
-    width, height = 1100, max(520, 70 + 28 * len(labels))
-    x, y, w, h = 260, 70, 820, height - 120
-    max_value = max(values) if values else 1
-    body = [f'<text x="{width / 2}" y="35" text-anchor="middle" font-size="24" font-weight="700" fill="#334155">{svg_text(title)}</text>']
-    for idx, (label, value) in enumerate(zip(labels, values)):
-        row_h = h / max(len(labels), 1)
-        by = y + idx * row_h + row_h * 0.18
-        bw = w * (value / max_value)
-        body.append(f'<text x="{x - 10}" y="{by + row_h * 0.45:.1f}" text-anchor="end" font-size="13" fill="#475569">{svg_text(label)}</text>')
-        body.append(f'<rect x="{x}" y="{by:.1f}" width="{bw:.1f}" height="{row_h * 0.64:.1f}" fill="{color}" opacity="0.85"/>')
-        body.append(f'<text x="{x + bw + 6:.1f}" y="{by + row_h * 0.45:.1f}" font-size="12" fill="#475569">{value:.0f}</text>')
-    write_svg(path, "\n".join(body), width=width, height=height)
-
-
-def svg_grouped_bars(path: Path, data: pd.DataFrame, title: str) -> None:
-    width, height = 1100, 620
-    x, y, w, h = 90, 80, 980, 430
-    labels = list(data.index)
-    columns = list(data.columns)
-    colors = ["#22C55E", "#94A3B8", "#F97316", "#3B82F6"]
-    max_value = float(data.to_numpy().max()) if data.size else 1.0
-    group_w = w / max(len(labels), 1)
-    bar_w = group_w / (len(columns) + 1)
-    body = [f'<text x="{width / 2}" y="40" text-anchor="middle" font-size="24" font-weight="700" fill="#334155">{svg_text(title)}</text>']
-    body.append(f'<line x1="{x}" y1="{y + h}" x2="{x + w}" y2="{y + h}" stroke="#64748B" stroke-width="2"/>')
-    body.append(f'<line x1="{x}" y1="{y}" x2="{x}" y2="{y + h}" stroke="#64748B" stroke-width="2"/>')
-    for i, label in enumerate(labels):
-        gx = x + i * group_w
-        for j, col in enumerate(columns):
-            value = float(data.loc[label, col])
-            bh = h * (value / max_value)
-            bx = gx + (j + 0.5) * bar_w
-            by = y + h - bh
-            body.append(f'<rect x="{bx:.1f}" y="{by:.1f}" width="{bar_w * 0.82:.1f}" height="{bh:.1f}" fill="{colors[j % len(colors)]}" opacity="0.85"/>')
-        body.append(f'<text x="{gx + group_w / 2:.1f}" y="{y + h + 35}" text-anchor="middle" font-size="12" fill="#475569" transform="rotate(18 {gx + group_w / 2:.1f} {y + h + 35})">{svg_text(label)}</text>')
-    for j, col in enumerate(columns):
-        lx = x + j * 190
-        body.append(f'<rect x="{lx}" y="{height - 35}" width="16" height="16" fill="{colors[j % len(colors)]}" opacity="0.85"/>')
-        body.append(f'<text x="{lx + 22}" y="{height - 22}" font-size="13" fill="#475569">{svg_text(col)}</text>')
-    write_svg(path, "\n".join(body), width=width, height=height)
-
-
-def series_stats(values: pd.Series | np.ndarray, label: str) -> dict[str, float | int | str]:
-    arr = np.asarray(values, dtype=float)
-    if arr.size == 0:
-        return {"metric": label, "count": 0}
+    component_sizes = Counter(union_find.find(node) for node in union_find.parent)
+    sizes = np.asarray(sorted(component_sizes.values(), reverse=True), dtype=int)
+    total_nodes = int(sizes.sum())
     return {
-        "metric": label,
-        "count": int(arr.size),
-        "min": float(np.min(arr)),
-        "q25": float(np.quantile(arr, 0.25)),
-        "median": float(np.median(arr)),
-        "mean": float(np.mean(arr)),
-        "q75": float(np.quantile(arr, 0.75)),
-        "max": float(np.max(arr)),
-        "std": float(np.std(arr)),
+        "connected_components": int(len(sizes)),
+        "largest_component_nodes": int(sizes[0]),
+        "largest_component_share": float(sizes[0] / total_nodes),
+        "singleton_components": int((sizes == 1).sum()),
+        "median_component_size": float(np.median(sizes)),
     }
 
 
-def dti_network_analysis(dti: pd.DataFrame, dirs: dict[str, Path], dataset: str) -> dict:
-    drug_degrees = dti.groupby("head").size().sort_values(ascending=False)
-    target_degrees = dti.groupby("tail").size().sort_values(ascending=False)
-
-    n_interactions = len(dti)
-    n_drugs = dti["head"].nunique()
-    n_targets = dti["tail"].nunique()
-    matrix_size = n_drugs * n_targets
-    density = n_interactions / matrix_size if matrix_size else 0.0
-
-    summary = {
-        "dataset": dataset,
-        "positive_interactions": int(n_interactions),
-        "unique_drugs": int(n_drugs),
-        "unique_targets": int(n_targets),
-        "possible_pairs": int(matrix_size),
-        "matrix_density": float(density),
-        "matrix_sparsity": float(1.0 - density),
-        "avg_targets_per_drug": float(n_interactions / n_drugs) if n_drugs else 0.0,
-        "avg_drugs_per_target": float(n_interactions / n_targets) if n_targets else 0.0,
-        "drugs_degree_le_5": int((drug_degrees <= 5).sum()),
-        "drugs_degree_le_5_pct": float((drug_degrees <= 5).mean()) if len(drug_degrees) else 0.0,
-        "targets_degree_le_2": int((target_degrees <= 2).sum()),
-        "targets_degree_le_2_pct": float((target_degrees <= 2).mean()) if len(target_degrees) else 0.0,
+def degree_row(name: str, values: pd.Series) -> dict[str, float | int | str]:
+    return {
+        "entity_type": name,
+        "count": int(values.size),
+        "minimum": int(values.min()),
+        "q25": float(values.quantile(0.25)),
+        "median": float(values.median()),
+        "mean": float(values.mean()),
+        "q75": float(values.quantile(0.75)),
+        "maximum": int(values.max()),
+        "std": float(values.std(ddof=0)),
+        "gini": gini(values),
+        "top_10_percent_interaction_share": concentration(values),
     }
 
-    save_json(summary, dirs["tables"] / "dti_network_summary.json")
-    save_csv(pd.DataFrame([summary]), dirs["tables"] / "dti_network_summary.csv")
 
-    save_csv(
-        drug_degrees.reset_index(name="degree").rename(columns={"head": "drug_id"}),
-        dirs["tables"] / "drug_degrees.csv",
+def analyze_dti(data_dir: Path, tables_dir: Path) -> tuple[pd.DataFrame, dict, pd.Series, pd.Series]:
+    dti = read_triples(data_dir / "dt_all_08.txt")
+    drug_degree = dti.groupby("head").size().sort_values(ascending=False)
+    target_degree = dti.groupby("tail").size().sort_values(ascending=False)
+    possible_pairs = int(drug_degree.size * target_degree.size)
+    density = float(len(dti) / possible_pairs)
+
+    overview = {
+        "positive_interactions": int(len(dti)),
+        "unique_drugs": int(drug_degree.size),
+        "unique_targets": int(target_degree.size),
+        "possible_drug_target_pairs": possible_pairs,
+        "observed_positive_density": density,
+        "unobserved_pair_sparsity": 1.0 - density,
+        "unobserved_pairs": possible_pairs - int(len(dti)),
+        "average_targets_per_drug": float(drug_degree.mean()),
+        "average_drugs_per_target": float(target_degree.mean()),
+        "drug_degree_le_5_count": int((drug_degree <= 5).sum()),
+        "drug_degree_le_5_share": float((drug_degree <= 5).mean()),
+        "target_degree_le_2_count": int((target_degree <= 2).sum()),
+        "target_degree_le_2_share": float((target_degree <= 2).mean()),
+        **connected_component_stats(dti),
+    }
+
+    degree_summary = pd.DataFrame(
+        [degree_row("Drug", drug_degree), degree_row("Target", target_degree)]
     )
-    save_csv(
-        target_degrees.reset_index(name="degree").rename(columns={"tail": "target_id"}),
-        dirs["tables"] / "target_degrees.csv",
+    save_table(pd.DataFrame([overview]), tables_dir / "dataset_overview.csv")
+    save_json(overview, tables_dir / "dataset_overview.json")
+    save_table(degree_summary, tables_dir / "degree_summary.csv")
+    save_table(
+        drug_degree.rename_axis("drug_id").reset_index(name="degree"),
+        tables_dir / "drug_degrees.csv",
     )
-    save_csv(
-        drug_degrees.head(25).reset_index(name="degree").rename(columns={"head": "drug_id"}),
-        dirs["tables"] / "top_25_drug_hubs.csv",
+    save_table(
+        target_degree.rename_axis("target_id").reset_index(name="degree"),
+        tables_dir / "target_degrees.csv",
     )
-    save_csv(
-        target_degrees.head(25).reset_index(name="degree").rename(columns={"tail": "target_id"}),
-        dirs["tables"] / "top_25_target_hubs.csv",
+    save_table(
+        drug_degree.head(20).rename_axis("drug_id").reset_index(name="degree"),
+        tables_dir / "top_drug_hubs.csv",
     )
-
-    plot_degree_distribution(drug_degrees, target_degrees, dirs["figures"], dataset)
-    plot_ccdf(drug_degrees, target_degrees, dirs["figures"], dataset)
-    plot_top_hubs(drug_degrees, target_degrees, dirs["figures"], dataset)
-
-    return summary
-
-
-def plot_degree_distribution(
-    drug_degrees: pd.Series,
-    target_degrees: pd.Series,
-    figures_dir: Path,
-    dataset: str,
-) -> None:
-    if not HAS_MATPLOTLIB:
-        body = "\n".join(
-            [
-                svg_hist_panel(
-                    drug_degrees.values,
-                    90,
-                    95,
-                    470,
-                    390,
-                    f"{dataset}: Drug Degree Distribution",
-                    "Number of Associated Targets",
-                    "Count of Drugs",
-                    "#8B5CF6",
-                ),
-                svg_hist_panel(
-                    target_degrees.values,
-                    690,
-                    95,
-                    470,
-                    390,
-                    f"{dataset}: Protein Target Degree Distribution",
-                    "Number of Associated Drugs",
-                    "Count of Targets",
-                    "#D946EF",
-                ),
-            ]
-        )
-        write_svg(figures_dir / "degree_distribution.svg", body, width=1240, height=620)
-        return
-
-    set_plot_style()
-    fig, axes = plt.subplots(1, 2, figsize=(16, 5.5))
-
-    axes[0].hist(drug_degrees.values, bins=30, color="#8B5CF6", alpha=0.82, edgecolor="#4C1D95")
-    axes[0].set_title(f"{dataset}: Drug Degree Distribution")
-    axes[0].set_xlabel("Number of Associated Targets")
-    axes[0].set_ylabel("Count of Drugs")
-    axes[0].grid(True, linestyle="--", alpha=0.7)
-
-    axes[1].hist(target_degrees.values, bins=30, color="#D946EF", alpha=0.82, edgecolor="#86198F")
-    axes[1].set_title(f"{dataset}: Protein Target Degree Distribution")
-    axes[1].set_xlabel("Number of Associated Drugs")
-    axes[1].set_ylabel("Count of Targets")
-    axes[1].grid(True, linestyle="--", alpha=0.7)
-
-    fig.tight_layout()
-    fig.savefig(figures_dir / "degree_distribution.png", dpi=220, bbox_inches="tight")
-    plt.close(fig)
+    save_table(
+        target_degree.head(20).rename_axis("target_id").reset_index(name="degree"),
+        tables_dir / "top_target_hubs.csv",
+    )
+    return dti, overview, drug_degree, target_degree
 
 
-def plot_ccdf(
-    drug_degrees: pd.Series,
-    target_degrees: pd.Series,
-    figures_dir: Path,
-    dataset: str,
-) -> None:
-    if not HAS_MATPLOTLIB:
-        # SVG fallback: save the same heavy-tail information as a ranked-degree line chart.
-        body = []
-        for panel, (degrees, title, color) in enumerate(
-            [
-                (drug_degrees, "Drug Degree Rank Plot", "#7C3AED"),
-                (target_degrees, "Target Degree Rank Plot", "#C026D3"),
-            ]
-        ):
-            x0, y0, w, h = (90 + panel * 600), 95, 470, 390
-            values = np.sort(degrees.values)[::-1]
-            max_x = max(len(values) - 1, 1)
-            max_y = max(float(values.max()), 1.0)
-            points = []
-            for i, value in enumerate(values):
-                px = x0 + w * (i / max_x)
-                py = y0 + h - h * (float(value) / max_y)
-                points.append(f"{px:.1f},{py:.1f}")
-            body.append(svg_axes(x0, y0, w, h, f"{dataset}: {title}", "Rank", "Degree"))
-            body.append(f'<polyline points="{" ".join(points)}" fill="none" stroke="{color}" stroke-width="2"/>')
-        write_svg(figures_dir / "degree_rank_plot.svg", "\n".join(body), width=1240, height=620)
-        return
-
-    set_plot_style()
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-
-    for ax, degrees, title, color in [
-        (axes[0], drug_degrees, "Drug Degree CCDF", "#7C3AED"),
-        (axes[1], target_degrees, "Target Degree CCDF", "#C026D3"),
-    ]:
-        values = np.sort(degrees.values)
-        ccdf = 1.0 - np.arange(1, len(values) + 1) / len(values)
-        ax.plot(values, ccdf, marker="o", markersize=3, linewidth=1.6, color=color)
-        ax.set_xscale("log")
-        ax.set_yscale("log")
-        ax.set_title(f"{dataset}: {title}")
-        ax.set_xlabel("Degree")
-        ax.set_ylabel("P(Degree >= x)")
-        ax.grid(True, which="both", linestyle="--", alpha=0.6)
-
-    fig.tight_layout()
-    fig.savefig(figures_dir / "degree_ccdf_loglog.png", dpi=220, bbox_inches="tight")
-    plt.close(fig)
-
-
-def plot_top_hubs(
-    drug_degrees: pd.Series,
-    target_degrees: pd.Series,
-    figures_dir: Path,
-    dataset: str,
-    top_n: int = 15,
-) -> None:
-    if not HAS_MATPLOTLIB:
-        top_drugs = drug_degrees.head(top_n).sort_values(ascending=False)
-        top_targets = target_degrees.head(top_n).sort_values(ascending=False)
-        svg_horizontal_bars(
-            figures_dir / "top_drug_hubs.svg",
-            [str(x) for x in top_drugs.index],
-            [float(x) for x in top_drugs.values],
-            f"{dataset}: Top {top_n} Drug Hubs",
-            "#7C3AED",
-        )
-        svg_horizontal_bars(
-            figures_dir / "top_target_hubs.svg",
-            [str(x) for x in top_targets.index],
-            [float(x) for x in top_targets.values],
-            f"{dataset}: Top {top_n} Target Hubs",
-            "#C026D3",
-        )
-        return
-
-    set_plot_style()
-    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
-
-    top_drugs = drug_degrees.head(top_n).sort_values()
-    axes[0].barh(top_drugs.index, top_drugs.values, color="#7C3AED", alpha=0.85)
-    axes[0].set_title(f"{dataset}: Top {top_n} Drug Hubs")
-    axes[0].set_xlabel("Degree")
-    axes[0].grid(True, axis="x", linestyle="--", alpha=0.65)
-
-    top_targets = target_degrees.head(top_n).sort_values()
-    axes[1].barh(top_targets.index, top_targets.values, color="#C026D3", alpha=0.85)
-    axes[1].set_title(f"{dataset}: Top {top_n} Target Hubs")
-    axes[1].set_xlabel("Degree")
-    axes[1].grid(True, axis="x", linestyle="--", alpha=0.65)
-
-    fig.tight_layout()
-    fig.savefig(figures_dir / "top_hubs.png", dpi=220, bbox_inches="tight")
-    plt.close(fig)
-
-
-def kg_analysis(config: DatasetConfig, dirs: dict[str, Path]) -> dict:
-    rows = []
-    relation_frames = []
-    all_kg_frames = []
-
-    for path in config.kg_paths:
-        kg = read_triples(path)
-        all_kg_frames.append(kg)
-        entities = pd.concat([kg["head"], kg["tail"]], ignore_index=True).nunique()
+def analyze_knowledge_graph(
+    data_dir: Path, dti: pd.DataFrame, tables_dir: Path
+) -> tuple[pd.DataFrame, dict]:
+    rows: list[dict] = []
+    frames: list[pd.DataFrame] = []
+    for path in [data_dir / "kg_data/kegg_kg.txt", data_dir / "kg_data/yamanishi_uniprot_kg.txt"]:
+        raw_frame = read_triples(path, deduplicate=False)
+        frame = raw_frame.drop_duplicates().reset_index(drop=True)
+        frames.append(frame)
+        entities = set(frame["head"]) | set(frame["tail"])
         rows.append(
             {
-                "kg_file": path.name,
-                "triples": len(kg),
-                "entities": int(entities),
-                "relations": int(kg["relation"].nunique()),
-                "unique_heads": int(kg["head"].nunique()),
-                "unique_tails": int(kg["tail"].nunique()),
+                "graph": path.stem,
+                "raw_triples": int(len(raw_frame)),
+                "unique_triples": int(len(frame)),
+                "duplicate_triples": int(raw_frame.duplicated().sum()),
+                "entities": int(len(entities)),
+                "relations": int(frame["relation"].nunique()),
+                "unique_entity_pairs": int(frame[["head", "tail"]].drop_duplicates().shape[0]),
             }
         )
-        rel = kg["relation"].value_counts().rename_axis("relation").reset_index(name="count")
-        rel.insert(0, "kg_file", path.name)
-        relation_frames.append(rel)
 
-    kg_all = pd.concat(all_kg_frames, ignore_index=True) if all_kg_frames else pd.DataFrame(columns=TRIPLE_COLUMNS)
-    rows.append(
+    kg = pd.concat(frames, ignore_index=True).drop_duplicates().reset_index(drop=True)
+    entities = set(kg["head"]) | set(kg["tail"])
+    relation_counts = kg["relation"].value_counts()
+    relation_entropy, normalized_entropy = entropy(relation_counts)
+    unique_pairs = int(kg[["head", "tail"]].drop_duplicates().shape[0])
+    combined = {
+        "graph": "combined",
+        "raw_triples": int(sum(row["raw_triples"] for row in rows)),
+        "unique_triples": int(len(kg)),
+        "duplicate_triples": int(sum(row["duplicate_triples"] for row in rows)),
+        "entities": int(len(entities)),
+        "relations": int(relation_counts.size),
+        "unique_entity_pairs": unique_pairs,
+        "directed_pair_density": float(unique_pairs / (len(entities) ** 2)),
+        "relation_aware_density": float(len(kg) / (len(entities) ** 2 * relation_counts.size)),
+        "relation_entropy_bits": relation_entropy,
+        "normalized_relation_entropy": normalized_entropy,
+        "top_5_relation_share": float(relation_counts.head(5).sum() / len(kg)),
+        "dti_drug_coverage": float(dti["head"].isin(entities).mean()),
+        "dti_target_coverage": float(dti["tail"].isin(entities).mean()),
+        "unique_dti_drugs_covered": int(dti.loc[dti["head"].isin(entities), "head"].nunique()),
+        "unique_dti_targets_covered": int(dti.loc[dti["tail"].isin(entities), "tail"].nunique()),
+    }
+    rows.append(combined)
+
+    relation_table = relation_counts.rename_axis("relation").reset_index(name="triple_count")
+    relation_table["share"] = relation_table["triple_count"] / len(kg)
+    save_table(pd.DataFrame(rows), tables_dir / "knowledge_graph_summary.csv")
+    save_table(relation_table, tables_dir / "knowledge_graph_relations.csv")
+    return relation_table, combined
+
+
+def numeric_quality(values: np.ndarray) -> dict[str, float | int]:
+    return {
+        "rows": int(values.shape[0]),
+        "dimensions": int(values.shape[1]),
+        "minimum": float(np.nanmin(values)),
+        "maximum": float(np.nanmax(values)),
+        "mean": float(np.nanmean(values)),
+        "zero_share": float(np.mean(values == 0)),
+        "missing_values": int(np.isnan(values).sum()),
+        "infinite_values": int(np.isinf(values).sum()),
+        "constant_dimensions": int(np.sum(np.nanstd(values, axis=0) == 0)),
+    }
+
+
+def analyze_features(data_dir: Path, tables_dir: Path) -> tuple[pd.DataFrame, dict[str, np.ndarray]]:
+    morgan = np.loadtxt(data_dir / "morganfp.txt", delimiter=",")
+    ctd = np.loadtxt(data_dir / "pro_ctd.txt", delimiter=",")
+    structures = pd.read_csv(data_dir / "791drug_struc.csv")
+    sequences = pd.read_csv(data_dir / "989proseq.csv")
+
+    active_bits = np.sum(morgan != 0, axis=1)
+    sequence_lengths = sequences["seq"].astype(str).str.len().to_numpy()
+    smiles_lengths = structures["smiles"].astype(str).str.len().to_numpy()
+
+    morgan_stats = numeric_quality(morgan)
+    morgan_stats.update(
         {
-            "kg_file": "combined",
-            "triples": len(kg_all),
-            "entities": int(pd.concat([kg_all["head"], kg_all["tail"]], ignore_index=True).nunique()) if len(kg_all) else 0,
-            "relations": int(kg_all["relation"].nunique()) if len(kg_all) else 0,
-            "unique_heads": int(kg_all["head"].nunique()) if len(kg_all) else 0,
-            "unique_tails": int(kg_all["tail"].nunique()) if len(kg_all) else 0,
+            "feature_block": "Drug Morgan fingerprint",
+            "average_nonzero_values_per_row": float(active_bits.mean()),
+            "median_nonzero_values_per_row": float(np.median(active_bits)),
         }
     )
-
-    kg_summary = pd.DataFrame(rows)
-    relation_counts = pd.concat(relation_frames, ignore_index=True) if relation_frames else pd.DataFrame()
-    combined_relations = kg_all["relation"].value_counts().rename_axis("relation").reset_index(name="count")
-
-    save_csv(kg_summary, dirs["tables"] / "kg_summary.csv")
-    save_csv(relation_counts, dirs["tables"] / "kg_relation_counts_by_file.csv")
-    save_csv(combined_relations, dirs["tables"] / "kg_relation_counts_combined.csv")
-    plot_relation_distribution(combined_relations, dirs["figures"], config.name)
-
-    return kg_summary.iloc[-1].to_dict()
-
-
-def plot_relation_distribution(relation_counts: pd.DataFrame, figures_dir: Path, dataset: str, top_n: int = 20) -> None:
-    if relation_counts.empty:
-        return
-    if not HAS_MATPLOTLIB:
-        top = relation_counts.head(top_n)
-        svg_horizontal_bars(
-            figures_dir / "kg_top_relations.svg",
-            [str(x) for x in top["relation"]],
-            [float(x) for x in top["count"]],
-            f"{dataset}: Top {top_n} Knowledge Graph Relations",
-            "#2563EB",
-        )
-        return
-
-    set_plot_style()
-    top = relation_counts.head(top_n).sort_values("count")
-    fig, ax = plt.subplots(figsize=(11, 7))
-    ax.barh(top["relation"], top["count"], color="#2563EB", alpha=0.85)
-    ax.set_title(f"{dataset}: Top {top_n} Knowledge Graph Relations")
-    ax.set_xlabel("Triple Count")
-    ax.grid(True, axis="x", linestyle="--", alpha=0.65)
-    fig.tight_layout()
-    fig.savefig(figures_dir / "kg_top_relations.png", dpi=220, bbox_inches="tight")
-    plt.close(fig)
-
-
-def feature_analysis(config: DatasetConfig, dirs: dict[str, Path]) -> None:
-    rows = []
-
-    if config.name == "yamanishi_08":
-        if config.drug_feature_path and config.drug_feature_path.exists():
-            drug = np.loadtxt(config.drug_feature_path, delimiter=",")
-            active_bits = (drug == 1).sum(axis=1)
-            rows.append(
-                {
-                    "feature_block": "drug_morgan_fingerprint",
-                    "rows": int(drug.shape[0]),
-                    "columns": int(drug.shape[1]),
-                    "min": float(np.min(drug)),
-                    "max": float(np.max(drug)),
-                    "mean": float(np.mean(drug)),
-                    "sparsity_zero": float((drug == 0).mean()),
-                    "avg_active_bits": float(active_bits.mean()),
-                }
-            )
-            plot_feature_density(active_bits, dirs["figures"], config.name, "drug_active_bits", "Active Morgan Bits per Drug")
-
-        if config.protein_feature_path and config.protein_feature_path.exists():
-            protein = np.loadtxt(config.protein_feature_path, delimiter=",")
-            rows.append(
-                {
-                    "feature_block": "protein_ctd_descriptor",
-                    "rows": int(protein.shape[0]),
-                    "columns": int(protein.shape[1]),
-                    "min": float(np.min(protein)),
-                    "max": float(np.max(protein)),
-                    "mean": float(np.mean(protein)),
-                    "sparsity_zero": float((protein == 0).mean()),
-                    "avg_active_bits": np.nan,
-                }
-            )
-            plot_feature_value_distribution(protein, dirs["figures"], config.name, "protein_ctd_values")
-    else:
-        for label, path, id_col in [
-            ("drug_fingerprint", config.drug_feature_path, "comp_id"),
-            ("protein_descriptor", config.protein_feature_path, "pro_ids"),
-        ]:
-            if path and path.exists():
-                frame = pd.read_csv(path)
-                numeric = frame.drop(columns=[id_col], errors="ignore").select_dtypes(include=[np.number])
-                values = numeric.to_numpy(dtype=float)
-                rows.append(
-                    {
-                        "feature_block": label,
-                        "rows": int(frame.shape[0]),
-                        "columns": int(numeric.shape[1]),
-                        "min": float(np.nanmin(values)),
-                        "max": float(np.nanmax(values)),
-                        "mean": float(np.nanmean(values)),
-                        "sparsity_zero": float(np.nanmean(values == 0)),
-                        "avg_active_bits": float(np.nanmean((values == 1).sum(axis=1))) if values.size else np.nan,
-                    }
-                )
-                if label == "drug_fingerprint":
-                    plot_feature_density((values == 1).sum(axis=1), dirs["figures"], config.name, "drug_active_bits", "Active Fingerprint Bits per Drug")
-                else:
-                    plot_feature_value_distribution(values, dirs["figures"], config.name, "protein_descriptor_values")
-
-    if config.drug_structure_path and config.drug_structure_path.exists():
-        structure = pd.read_csv(config.drug_structure_path)
-        smiles_col = next((c for c in structure.columns if c.lower() in {"smiles", "canonical_smiles"}), None)
-        if smiles_col:
-            lengths = structure[smiles_col].astype(str).str.len()
-            rows.append(series_stats(lengths, "drug_smiles_length"))
-            plot_feature_density(lengths, dirs["figures"], config.name, "smiles_lengths", "SMILES Length")
-
-    if config.protein_sequence_path and config.protein_sequence_path.exists():
-        seq = pd.read_csv(config.protein_sequence_path)
-        seq_col = next((c for c in seq.columns if c.lower() in {"seq", "sequence"}), None)
-        if seq_col:
-            lengths = seq[seq_col].astype(str).str.len()
-            rows.append(series_stats(lengths, "protein_sequence_length"))
-            plot_feature_density(lengths, dirs["figures"], config.name, "protein_sequence_lengths", "Protein Sequence Length")
-
-    if rows:
-        save_csv(pd.DataFrame(rows), dirs["tables"] / "feature_summary.csv")
-
-
-def plot_feature_density(values: Iterable[float], figures_dir: Path, dataset: str, slug: str, xlabel: str) -> None:
-    if not HAS_MATPLOTLIB:
-        body = svg_hist_panel(values, 90, 95, 820, 390, f"{dataset}: {xlabel} Distribution", xlabel, "Count", "#059669")
-        write_svg(figures_dir / f"{slug}.svg", body, width=1000, height=620)
-        return
-
-    set_plot_style()
-    arr = np.asarray(list(values), dtype=float)
-    if arr.size == 0:
-        return
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.hist(arr, bins=35, color="#059669", alpha=0.82, edgecolor="#065F46")
-    ax.set_title(f"{dataset}: {xlabel} Distribution")
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel("Count")
-    ax.grid(True, linestyle="--", alpha=0.65)
-    fig.tight_layout()
-    fig.savefig(figures_dir / f"{slug}.png", dpi=220, bbox_inches="tight")
-    plt.close(fig)
-
-
-def plot_feature_value_distribution(values: np.ndarray, figures_dir: Path, dataset: str, slug: str) -> None:
-    if not HAS_MATPLOTLIB:
-        arr = values.reshape(-1)
-        if arr.size > 250_000:
-            rng = np.random.default_rng(42)
-            arr = rng.choice(arr, size=250_000, replace=False)
-        body = svg_hist_panel(arr, 90, 95, 820, 390, f"{dataset}: Descriptor Value Distribution", "Feature Value", "Frequency", "#0EA5E9")
-        write_svg(figures_dir / f"{slug}.svg", body, width=1000, height=620)
-        return
-
-    set_plot_style()
-    arr = values.reshape(-1)
-    if arr.size > 250_000:
-        rng = np.random.default_rng(42)
-        arr = rng.choice(arr, size=250_000, replace=False)
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.hist(arr, bins=50, color="#0EA5E9", alpha=0.82, edgecolor="#075985")
-    ax.set_title(f"{dataset}: Descriptor Value Distribution")
-    ax.set_xlabel("Feature Value")
-    ax.set_ylabel("Frequency")
-    ax.grid(True, linestyle="--", alpha=0.65)
-    fig.tight_layout()
-    fig.savefig(figures_dir / f"{slug}.png", dpi=220, bbox_inches="tight")
-    plt.close(fig)
-
-
-def split_analysis(config: DatasetConfig, dirs: dict[str, Path], splits: list[str]) -> None:
-    rows = []
-    for split in splits:
-        split_root = config.root / "data_folds" / split
-        if not split_root.exists():
-            continue
-        for fold in range(1, 11):
-            train_path = split_root / f"train_fold_{fold}.csv"
-            test_path = split_root / f"test_fold_{fold}.csv"
-            if not train_path.exists() or not test_path.exists():
-                continue
-            train = pd.read_csv(train_path)
-            test = pd.read_csv(test_path)
-            train.columns = [str(col).strip() for col in train.columns]
-            test.columns = [str(col).strip() for col in test.columns]
-            train_pos = train[train["label"] == 1]
-            test_pos = test[test["label"] == 1]
-            rows.append(
-                {
-                    "split": split,
-                    "fold": fold,
-                    "train_samples": len(train),
-                    "test_samples": len(test),
-                    "train_pos": int((train["label"] == 1).sum()),
-                    "train_neg": int((train["label"] == 0).sum()),
-                    "test_pos": int((test["label"] == 1).sum()),
-                    "test_neg": int((test["label"] == 0).sum()),
-                    "train_drugs": int(train["head"].nunique()),
-                    "test_drugs": int(test["head"].nunique()),
-                    "train_targets": int(train["tail"].nunique()),
-                    "test_targets": int(test["tail"].nunique()),
-                    "all_drug_overlap": int(len(set(train["head"]) & set(test["head"]))),
-                    "all_target_overlap": int(len(set(train["tail"]) & set(test["tail"]))),
-                    "positive_drug_overlap": int(len(set(train_pos["head"]) & set(test_pos["head"]))),
-                    "positive_target_overlap": int(len(set(train_pos["tail"]) & set(test_pos["tail"]))),
-                }
-            )
-
-    if not rows:
-        return
-
-    fold_stats = pd.DataFrame(rows)
-    save_csv(fold_stats, dirs["tables"] / "fold_level_split_stats.csv")
-
-    agg = (
-        fold_stats.groupby("split")
-        .agg(["mean", "std", "min", "max"])
-        .reset_index()
+    ctd_stats = numeric_quality(ctd)
+    ctd_stats.update(
+        {
+            "feature_block": "Protein CTD descriptor",
+            "average_nonzero_values_per_row": float(np.count_nonzero(ctd, axis=1).mean()),
+            "median_nonzero_values_per_row": float(np.median(np.count_nonzero(ctd, axis=1))),
+        }
     )
-    agg.columns = ["_".join([str(x) for x in col if str(x)]) for col in agg.columns]
-    save_csv(agg, dirs["tables"] / "split_summary.csv")
+    feature_summary = pd.DataFrame([morgan_stats, ctd_stats])
+    save_table(feature_summary, tables_dir / "feature_summary.csv")
 
-    plot_split_class_balance(fold_stats, dirs["figures"], config.name)
-    plot_split_entity_overlap(fold_stats, dirs["figures"], config.name)
-
-
-def plot_split_class_balance(fold_stats: pd.DataFrame, figures_dir: Path, dataset: str) -> None:
-    if not HAS_MATPLOTLIB:
-        summary = fold_stats.groupby("split")[["train_pos", "train_neg", "test_pos", "test_neg"]].mean()
-        svg_grouped_bars(figures_dir / "split_class_balance.svg", summary, f"{dataset}: Mean Class Balance")
-        return
-
-    set_plot_style()
-    summary = fold_stats.groupby("split")[["train_pos", "train_neg", "test_pos", "test_neg"]].mean()
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-    summary[["train_pos", "train_neg"]].plot(kind="bar", stacked=True, ax=axes[0], color=["#22C55E", "#94A3B8"])
-    axes[0].set_title(f"{dataset}: Mean Train Class Balance")
-    axes[0].set_xlabel("Split")
-    axes[0].set_ylabel("Samples")
-    axes[0].tick_params(axis="x", rotation=20)
-    axes[0].grid(True, axis="y", linestyle="--", alpha=0.65)
-
-    summary[["test_pos", "test_neg"]].plot(kind="bar", stacked=True, ax=axes[1], color=["#22C55E", "#94A3B8"])
-    axes[1].set_title(f"{dataset}: Mean Test Class Balance")
-    axes[1].set_xlabel("Split")
-    axes[1].set_ylabel("Samples")
-    axes[1].tick_params(axis="x", rotation=20)
-    axes[1].grid(True, axis="y", linestyle="--", alpha=0.65)
-
-    fig.tight_layout()
-    fig.savefig(figures_dir / "split_class_balance.png", dpi=220, bbox_inches="tight")
-    plt.close(fig)
-
-
-def plot_split_entity_overlap(fold_stats: pd.DataFrame, figures_dir: Path, dataset: str) -> None:
-    if not HAS_MATPLOTLIB:
-        summary = fold_stats.groupby("split")[["positive_drug_overlap", "positive_target_overlap"]].mean()
-        svg_grouped_bars(figures_dir / "positive_entity_overlap.svg", summary, f"{dataset}: Mean Positive Entity Overlap")
-        return
-
-    set_plot_style()
-    summary = fold_stats.groupby("split")[["positive_drug_overlap", "positive_target_overlap"]].mean()
-    fig, ax = plt.subplots(figsize=(10, 5))
-    summary.plot(kind="bar", ax=ax, color=["#F97316", "#3B82F6"])
-    ax.set_title(f"{dataset}: Mean Positive Entity Overlap")
-    ax.set_xlabel("Split")
-    ax.set_ylabel("Overlap Count")
-    ax.tick_params(axis="x", rotation=20)
-    ax.grid(True, axis="y", linestyle="--", alpha=0.65)
-    fig.tight_layout()
-    fig.savefig(figures_dir / "positive_entity_overlap.png", dpi=220, bbox_inches="tight")
-    plt.close(fig)
-
-
-def write_markdown_report(dataset: str, dataset_out: Path) -> None:
-    tables = dataset_out / "tables"
-    figures = dataset_out / "figures"
-    network = pd.read_csv(tables / "dti_network_summary.csv").iloc[0].to_dict()
-    kg_path = tables / "kg_summary.csv"
-    kg = pd.read_csv(kg_path).tail(1).iloc[0].to_dict() if kg_path.exists() else {}
-
-    lines = [
-        f"# {dataset} Dataset Analysis",
-        "",
-        "## DTI Network",
-        "",
-        f"- Positive interactions: {int(network['positive_interactions']):,}",
-        f"- Unique drugs: {int(network['unique_drugs']):,}",
-        f"- Unique targets: {int(network['unique_targets']):,}",
-        f"- Matrix density: {network['matrix_density']:.4%}",
-        f"- Matrix sparsity: {network['matrix_sparsity']:.4%}",
-        f"- Drugs with degree <= 5: {int(network['drugs_degree_le_5']):,} ({network['drugs_degree_le_5_pct']:.2%})",
-        f"- Targets with degree <= 2: {int(network['targets_degree_le_2']):,} ({network['targets_degree_le_2_pct']:.2%})",
-        "",
-    ]
-    if kg:
-        lines += [
-            "## Knowledge Graph",
-            "",
-            f"- Triples: {int(kg['triples']):,}",
-            f"- Entities: {int(kg['entities']):,}",
-            f"- Relations: {int(kg['relations']):,}",
-            "",
+    length_summary = pd.DataFrame(
+        [
+            {
+                "representation": "SMILES",
+                "count": int(smiles_lengths.size),
+                "minimum": int(smiles_lengths.min()),
+                "median": float(np.median(smiles_lengths)),
+                "mean": float(smiles_lengths.mean()),
+                "maximum": int(smiles_lengths.max()),
+            },
+            {
+                "representation": "Protein sequence",
+                "count": int(sequence_lengths.size),
+                "minimum": int(sequence_lengths.min()),
+                "median": float(np.median(sequence_lengths)),
+                "mean": float(sequence_lengths.mean()),
+                "maximum": int(sequence_lengths.max()),
+            },
         ]
-    lines += [
+    )
+    save_table(length_summary, tables_dir / "sequence_structure_lengths.csv")
+    return feature_summary, {
+        "active_bits": active_bits,
+        "sequence_lengths": sequence_lengths,
+        "smiles_lengths": smiles_lengths,
+    }
+
+
+def pair_set(frame: pd.DataFrame) -> set[tuple[str, str]]:
+    return set(zip(frame["head"].astype(str), frame["tail"].astype(str)))
+
+
+def percentage_subset(test_values: set[str], train_values: set[str]) -> float:
+    return len(test_values & train_values) / len(test_values) if test_values else 1.0
+
+
+def analyze_warm_start_folds(
+    data_dir: Path, dti: pd.DataFrame, tables_dir: Path
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    gold_positive_pairs = pair_set(dti)
+    fold_rows: list[dict] = []
+    quality_rows: list[dict] = []
+    partition_rows: list[dict] = []
+
+    for split, display_name in WARM_START_SPLITS.items():
+        split_dir = data_dir / "data_folds" / split
+        test_positive_counter: Counter[tuple[str, str]] = Counter()
+
+        for fold in range(1, 11):
+            train = pd.read_csv(split_dir / f"train_fold_{fold}.csv")
+            test = pd.read_csv(split_dir / f"test_fold_{fold}.csv")
+            train["label"] = train["label"].astype(int)
+            test["label"] = test["label"].astype(int)
+            train_positive = train[train["label"] == 1]
+            test_positive = test[test["label"] == 1]
+            train_negative = train[train["label"] == 0]
+            test_negative = test[test["label"] == 0]
+
+            train_pairs = pair_set(train)
+            test_pairs = pair_set(test)
+            train_positive_pairs = pair_set(train_positive)
+            test_positive_pairs = pair_set(test_positive)
+            test_positive_counter.update(test_positive_pairs)
+
+            test_drugs = set(test["head"].astype(str))
+            test_targets = set(test["tail"].astype(str))
+            train_drugs = set(train["head"].astype(str))
+            train_targets = set(train["tail"].astype(str))
+            test_positive_drugs = set(test_positive["head"].astype(str))
+            test_positive_targets = set(test_positive["tail"].astype(str))
+            train_positive_drugs = set(train_positive["head"].astype(str))
+            train_positive_targets = set(train_positive["tail"].astype(str))
+
+            fold_rows.append(
+                {
+                    "setting": display_name,
+                    "fold": fold,
+                    "train_samples": int(len(train)),
+                    "test_samples": int(len(test)),
+                    "train_positive": int(len(train_positive)),
+                    "train_negative": int(len(train_negative)),
+                    "test_positive": int(len(test_positive)),
+                    "test_negative": int(len(test_negative)),
+                    "train_negative_positive_ratio": float(len(train_negative) / len(train_positive)),
+                    "test_negative_positive_ratio": float(len(test_negative) / len(test_positive)),
+                    "test_drug_train_coverage": percentage_subset(test_drugs, train_drugs),
+                    "test_target_train_coverage": percentage_subset(test_targets, train_targets),
+                    "positive_test_drug_positive_train_coverage": percentage_subset(
+                        test_positive_drugs, train_positive_drugs
+                    ),
+                    "positive_test_target_positive_train_coverage": percentage_subset(
+                        test_positive_targets, train_positive_targets
+                    ),
+                    "train_test_pair_overlap": int(len(train_pairs & test_pairs)),
+                    "train_test_positive_pair_overlap": int(
+                        len(train_positive_pairs & test_positive_pairs)
+                    ),
+                    "train_duplicate_rows": int(train.duplicated().sum()),
+                    "test_duplicate_rows": int(test.duplicated().sum()),
+                    "train_negative_gold_positive_collisions": int(
+                        len(pair_set(train_negative) & gold_positive_pairs)
+                    ),
+                    "test_negative_gold_positive_collisions": int(
+                        len(pair_set(test_negative) & gold_positive_pairs)
+                    ),
+                }
+            )
+
+        unique_test_positives = set(test_positive_counter)
+        partition_rows.append(
+            {
+                "setting": display_name,
+                "gold_positive_pairs": len(gold_positive_pairs),
+                "unique_test_positive_pairs_across_folds": len(unique_test_positives),
+                "gold_positive_coverage": len(unique_test_positives & gold_positive_pairs)
+                / len(gold_positive_pairs),
+                "test_positive_pairs_repeated_across_folds": sum(
+                    count > 1 for count in test_positive_counter.values()
+                ),
+                "maximum_test_positive_repetitions": max(test_positive_counter.values()),
+                "test_positive_pairs_not_in_gold_file": len(
+                    unique_test_positives - gold_positive_pairs
+                ),
+            }
+        )
+
+    fold_stats = pd.DataFrame(fold_rows)
+    metrics = [
+        "train_samples",
+        "test_samples",
+        "train_positive",
+        "train_negative",
+        "test_positive",
+        "test_negative",
+        "train_negative_positive_ratio",
+        "test_negative_positive_ratio",
+        "test_drug_train_coverage",
+        "test_target_train_coverage",
+        "positive_test_drug_positive_train_coverage",
+        "positive_test_target_positive_train_coverage",
+    ]
+    summary_rows: list[dict] = []
+    for setting, group in fold_stats.groupby("setting", sort=False):
+        row: dict[str, str | float] = {"setting": setting}
+        for metric in metrics:
+            row[f"{metric}_mean"] = float(group[metric].mean())
+            row[f"{metric}_std"] = float(group[metric].std(ddof=0))
+            row[f"{metric}_min"] = float(group[metric].min())
+            row[f"{metric}_max"] = float(group[metric].max())
+        summary_rows.append(row)
+        quality_rows.append(
+            {
+                "setting": setting,
+                "train_test_pair_overlap_total": int(group["train_test_pair_overlap"].sum()),
+                "train_test_positive_pair_overlap_total": int(
+                    group["train_test_positive_pair_overlap"].sum()
+                ),
+                "duplicate_rows_total": int(
+                    group["train_duplicate_rows"].sum() + group["test_duplicate_rows"].sum()
+                ),
+                "negative_gold_positive_collisions_total": int(
+                    group["train_negative_gold_positive_collisions"].sum()
+                    + group["test_negative_gold_positive_collisions"].sum()
+                ),
+                "minimum_test_drug_train_coverage": float(
+                    group["test_drug_train_coverage"].min()
+                ),
+                "minimum_test_target_train_coverage": float(
+                    group["test_target_train_coverage"].min()
+                ),
+            }
+        )
+
+    split_summary = pd.DataFrame(summary_rows)
+    quality_checks = pd.DataFrame(quality_rows).merge(
+        pd.DataFrame(partition_rows), on="setting", how="left"
+    )
+    save_table(fold_stats, tables_dir / "warm_start_fold_statistics.csv")
+    save_table(split_summary, tables_dir / "warm_start_summary.csv")
+    save_table(quality_checks, tables_dir / "warm_start_quality_checks.csv")
+    return fold_stats, split_summary, quality_checks
+
+
+def plot_degree_distributions(
+    drug_degree: pd.Series, target_degree: pd.Series, figures_dir: Path, dpi: int
+) -> None:
+    image, draw = make_canvas(1800, 760, "Yamanishi08 DTI Degree Distributions")
+    draw_histogram_panel(
+        draw,
+        (35, 90, 885, 725),
+        drug_degree.to_numpy(),
+        "Drug Degree Distribution",
+        "Known targets per drug",
+        COLORS["drug"],
+        log_y=True,
+    )
+    draw_histogram_panel(
+        draw,
+        (915, 90, 1765, 725),
+        target_degree.to_numpy(),
+        "Target Degree Distribution",
+        "Known drugs per target",
+        COLORS["target"],
+        log_y=True,
+    )
+    save_image(image, figures_dir / "dti_degree_distribution.png", dpi)
+
+
+def plot_degree_rank(
+    drug_degree: pd.Series, target_degree: pd.Series, figures_dir: Path, dpi: int
+) -> None:
+    image, draw = make_canvas(1200, 760, "Rank-Degree Profile of the DTI Graph")
+    plot = draw_panel_axes(
+        draw,
+        (70, 90, 1130, 720),
+        "Heavy-Tailed Connectivity",
+        "Entity rank (log scale)",
+        "Degree (log scale)",
+    )
+    x0, y0, x1, y1 = plot
+    max_rank = max(len(drug_degree), len(target_degree))
+    max_degree = max(drug_degree.max(), target_degree.max())
+    for values, label, color in [
+        (drug_degree, "Drugs", COLORS["drug"]),
+        (target_degree, "Targets", COLORS["target"]),
+    ]:
+        ranked = np.sort(values.to_numpy())[::-1]
+        points = []
+        for rank, degree in enumerate(ranked, start=1):
+            x = x0 + np.log10(rank) / np.log10(max_rank) * (x1 - x0)
+            y = y1 - np.log10(degree) / np.log10(max_degree) * (y1 - y0)
+            points.append((float(x), float(y)))
+        draw.line(points, fill=color, width=4)
+    draw_y_grid(draw, plot, math.log10(max_degree), lambda value: f"{10 ** value:.0f}")
+    legend_x = x1 - 175
+    for offset, (label, color) in enumerate(
+        [("Drugs", COLORS["drug"]), ("Targets", COLORS["target"])]
+    ):
+        y = y0 + 12 + offset * 32
+        draw.line((legend_x, y + 8, legend_x + 34, y + 8), fill=color, width=5)
+        draw.text((legend_x + 44, y), label, font=load_font(16), fill="#334155")
+    save_image(image, figures_dir / "dti_degree_rank.png", dpi)
+
+
+def plot_network_summary(overview: dict, degree_summary: pd.DataFrame, figures_dir: Path, dpi: int) -> None:
+    image, draw = make_canvas(2100, 740, "Yamanishi08 Network Sparsity and Imbalance")
+    draw_bar_panel(
+        draw,
+        (20, 85, 690, 705),
+        ["Observed", "Unobserved"],
+        [overview["observed_positive_density"] * 100, overview["unobserved_pair_sparsity"] * 100],
+        "Interaction Matrix",
+        "Pair share (%)",
+        [COLORS["positive"], "#C9D5E1"],
+        maximum=105,
+        percent=True,
+    )
+    draw_bar_panel(
+        draw,
+        (715, 85, 1385, 705),
+        ["Drug <= 5", "Target <= 2"],
+        [overview["drug_degree_le_5_share"] * 100, overview["target_degree_le_2_share"] * 100],
+        "Low-Degree Entities",
+        "Entity share (%)",
+        [COLORS["drug"], COLORS["target"]],
+        maximum=100,
+        percent=True,
+    )
+    draw_bar_panel(
+        draw,
+        (1410, 85, 2080, 705),
+        degree_summary["entity_type"].tolist(),
+        (degree_summary["top_10_percent_interaction_share"] * 100).tolist(),
+        "Hub Concentration",
+        "Top 10% interaction share",
+        [COLORS["drug"], COLORS["target"]],
+        maximum=100,
+        percent=True,
+    )
+    save_image(image, figures_dir / "network_sparsity_summary.png", dpi)
+
+
+def plot_kg_relations(relation_table: pd.DataFrame, figures_dir: Path, dpi: int) -> None:
+    top = relation_table.head(15).sort_values("triple_count")
+    image, draw = make_canvas(1500, 900, "Most Frequent Relations in the Combined Knowledge Graph")
+    left, top_y, right, bottom = 370, 105, 1435, 840
+    maximum = float(top["triple_count"].max())
+    row_height = (bottom - top_y) / len(top)
+    label_font = load_font(17)
+    value_font = load_font(15, bold=True)
+    for index, row in enumerate(top.itertuples(index=False)):
+        y = top_y + index * row_height
+        bar_width = (right - left) * row.triple_count / maximum
+        label_width, label_height = text_size(draw, row.relation, label_font)
+        draw.text((left - label_width - 16, y + row_height * 0.25), row.relation, font=label_font, fill="#334155")
+        draw.rounded_rectangle(
+            (left, y + row_height * 0.18, left + bar_width, y + row_height * 0.82),
+            radius=5,
+            fill=COLORS["kg"],
+        )
+        draw.text(
+            (left + bar_width + 10, y + row_height * 0.25),
+            f"{row.triple_count:,}",
+            font=value_font,
+            fill="#334155",
+        )
+    save_image(image, figures_dir / "knowledge_graph_relation_distribution.png", dpi)
+
+
+def plot_feature_characteristics(
+    feature_arrays: dict[str, np.ndarray], figures_dir: Path, dpi: int
+) -> None:
+    image, draw = make_canvas(2100, 740, "Yamanishi08 Descriptor Inputs")
+    draw_histogram_panel(
+        draw,
+        (20, 85, 690, 705),
+        feature_arrays["active_bits"],
+        "Morgan Fingerprint Activity",
+        "Nonzero bits per drug",
+        COLORS["drug"],
+    )
+    draw_histogram_panel(
+        draw,
+        (715, 85, 1385, 705),
+        feature_arrays["smiles_lengths"],
+        "SMILES Length",
+        "Characters",
+        COLORS["positive"],
+    )
+    draw_histogram_panel(
+        draw,
+        (1410, 85, 2080, 705),
+        feature_arrays["sequence_lengths"],
+        "Protein Sequence Length",
+        "Residues",
+        COLORS["negative"],
+        bins=35,
+    )
+    save_image(image, figures_dir / "feature_characteristics.png", dpi)
+
+
+def plot_warm_start_balance(fold_stats: pd.DataFrame, figures_dir: Path, dpi: int) -> None:
+    summary = fold_stats.groupby("setting", sort=False)[
+        ["train_positive", "train_negative", "test_positive", "test_negative"]
+    ].mean()
+    image, draw = make_canvas(1800, 760, "Warm-Start Class Balance Across Ten Folds")
+    for panel_index, (prefix, title) in enumerate(
+        [("train", "Mean Training Composition"), ("test", "Mean Test Composition")]
+    ):
+        box = (35 + panel_index * 880, 90, 875 + panel_index * 880, 720)
+        plot = draw_panel_axes(draw, box, title, "", "Pairs per fold")
+        x0, y0, x1, y1 = plot
+        totals = summary[f"{prefix}_positive"] + summary[f"{prefix}_negative"]
+        maximum = float(totals.max()) * 1.12
+        draw_y_grid(draw, plot, maximum, lambda value: f"{value / 1000:.0f}k" if value >= 1000 else f"{value:.0f}")
+        group_width = (x1 - x0) / len(summary)
+        for index, (setting, row) in enumerate(summary.iterrows()):
+            center = x0 + (index + 0.5) * group_width
+            bar_width = group_width * 0.48
+            positive = float(row[f"{prefix}_positive"])
+            negative = float(row[f"{prefix}_negative"])
+            positive_height = (y1 - y0) * positive / maximum
+            negative_height = (y1 - y0) * negative / maximum
+            draw.rectangle(
+                (center - bar_width / 2, y1 - positive_height, center + bar_width / 2, y1),
+                fill=COLORS["positive"],
+            )
+            draw.rectangle(
+                (
+                    center - bar_width / 2,
+                    y1 - positive_height - negative_height,
+                    center + bar_width / 2,
+                    y1 - positive_height,
+                ),
+                fill=COLORS["negative"],
+            )
+            draw_centered(draw, center, y1 + 12, setting.replace("Warm-start ", ""), load_font(16))
+    draw.rectangle((1370, 63, 1394, 87), fill=COLORS["positive"])
+    draw.text((1405, 63), "Positive", font=load_font(15), fill="#334155")
+    draw.rectangle((1490, 63, 1514, 87), fill=COLORS["negative"])
+    draw.text((1525, 63), "Sampled negative", font=load_font(15), fill="#334155")
+    save_image(image, figures_dir / "warm_start_class_balance.png", dpi)
+
+
+def plot_fold_stability(fold_stats: pd.DataFrame, figures_dir: Path, dpi: int) -> None:
+    image, draw = make_canvas(1800, 760, "Fold Stability of the Warm-Start Protocol")
+    panels = [
+        ("test_samples", "Total Test Pairs per Fold", "Test pairs"),
+        ("test_negative_positive_ratio", "Realized Test Negative-to-Positive Ratio", "Negative / positive"),
+    ]
+    line_colors = [COLORS["drug"], COLORS["target"]]
+    grouped = list(fold_stats.groupby("setting", sort=False))
+    for panel_index, (metric, title, ylabel) in enumerate(panels):
+        box = (35 + panel_index * 880, 90, 875 + panel_index * 880, 720)
+        plot = draw_panel_axes(draw, box, title, "Fold", ylabel)
+        x0, y0, x1, y1 = plot
+        all_values = fold_stats[metric].to_numpy(dtype=float)
+        minimum = float(all_values.min())
+        maximum = float(all_values.max())
+        padding = max((maximum - minimum) * 0.25, 0.1)
+        lower, upper = 0.0, maximum + padding
+        draw_y_grid(draw, plot, upper - lower, lambda value: f"{lower + value:.2f}" if metric.endswith("ratio") else f"{lower + value:.0f}")
+        for color, (setting, group) in zip(line_colors, grouped):
+            points = []
+            for row in group.itertuples(index=False):
+                x = x0 + (row.fold - 1) / 9 * (x1 - x0)
+                value = float(getattr(row, metric))
+                y = y1 - (value - lower) / (upper - lower) * (y1 - y0)
+                points.append((float(x), float(y)))
+            draw.line(points, fill=color, width=4)
+            for x, y in points:
+                draw.ellipse((x - 5, y - 5, x + 5, y + 5), fill=color)
+        for fold in range(1, 11):
+            x = x0 + (fold - 1) / 9 * (x1 - x0)
+            draw_centered(draw, x, y1 + 10, str(fold), load_font(13), "#64748B")
+    legend_x = 1325
+    for index, ((setting, _), color) in enumerate(zip(grouped, line_colors)):
+        x = legend_x + index * 220
+        y = 64
+        draw.line((x, y + 8, x + 34, y + 8), fill=color, width=5)
+        draw.text((x + 44, y), setting, font=load_font(15), fill="#334155")
+    save_image(image, figures_dir / "warm_start_fold_stability.png", dpi)
+
+
+def format_percent(value: float) -> str:
+    return f"{100 * value:.2f}%"
+
+
+def write_report(
+    output_dir: Path,
+    overview: dict,
+    degree_summary: pd.DataFrame,
+    kg_summary: dict,
+    feature_summary: pd.DataFrame,
+    split_summary: pd.DataFrame,
+    quality_checks: pd.DataFrame,
+) -> None:
+    drug_degree = degree_summary.loc[degree_summary["entity_type"] == "Drug"].iloc[0]
+    target_degree = degree_summary.loc[degree_summary["entity_type"] == "Target"].iloc[0]
+    split_lines: list[str] = []
+    for row in split_summary.itertuples(index=False):
+        split_lines.extend(
+            [
+                f"### {row.setting}",
+                "",
+                f"- Mean training pairs: {row.train_samples_mean:,.1f} "
+                f"({row.train_positive_mean:,.1f} positive, {row.train_negative_mean:,.1f} sampled negative)",
+                f"- Mean test pairs: {row.test_samples_mean:,.1f} "
+                f"({row.test_positive_mean:,.1f} positive, {row.test_negative_mean:,.1f} sampled negative)",
+                f"- Realized test negative-to-positive ratio: {row.test_negative_positive_ratio_mean:.3f}:1",
+                f"- Minimum test-drug training coverage: {format_percent(row.test_drug_train_coverage_min)}",
+                f"- Minimum test-target training coverage: {format_percent(row.test_target_train_coverage_min)}",
+                "",
+            ]
+        )
+
+    quality_lines: list[str] = []
+    for row in quality_checks.itertuples(index=False):
+        quality_lines.append(
+            f"- **{row.setting}:** pair overlap={row.train_test_pair_overlap_total}, "
+            f"duplicate rows={row.duplicate_rows_total}, "
+            f"negative/known-positive collisions={row.negative_gold_positive_collisions_total}, "
+            f"gold positives covered across test folds={format_percent(row.gold_positive_coverage)}."
+        )
+
+    morgan = feature_summary.loc[
+        feature_summary["feature_block"] == "Drug Morgan fingerprint"
+    ].iloc[0]
+    ctd = feature_summary.loc[
+        feature_summary["feature_block"] == "Protein CTD descriptor"
+    ].iloc[0]
+    lines = [
+        "# Yamanishi08 Dataset Analysis",
+        "",
+        "This analysis is restricted to Yamanishi08 and the two warm-start settings used by the project. "
+        "Unobserved drug-target pairs are described as *sampled negatives* rather than confirmed biological negatives.",
+        "",
+        "## Dataset Overview",
+        "",
+        f"- Known positive interactions: {overview['positive_interactions']:,}",
+        f"- Drugs: {overview['unique_drugs']:,}",
+        f"- Target proteins: {overview['unique_targets']:,}",
+        f"- Possible drug-target pairs: {overview['possible_drug_target_pairs']:,}",
+        f"- Observed positive density: {format_percent(overview['observed_positive_density'])}",
+        f"- Unobserved-pair sparsity: {format_percent(overview['unobserved_pair_sparsity'])}",
+        f"- Connected components: {overview['connected_components']:,}; largest component contains "
+        f"{format_percent(overview['largest_component_share'])} of DTI nodes",
+        "",
+        "## Degree Imbalance",
+        "",
+        f"- Median drug degree: {drug_degree['median']:.1f}; maximum: {int(drug_degree['maximum'])}; "
+        f"Gini coefficient: {drug_degree['gini']:.3f}",
+        f"- Median target degree: {target_degree['median']:.1f}; maximum: {int(target_degree['maximum'])}; "
+        f"Gini coefficient: {target_degree['gini']:.3f}",
+        f"- Drugs with at most five interactions: {overview['drug_degree_le_5_count']:,} "
+        f"({format_percent(overview['drug_degree_le_5_share'])})",
+        f"- Targets with at most two interactions: {overview['target_degree_le_2_count']:,} "
+        f"({format_percent(overview['target_degree_le_2_share'])})",
+        f"- Top 10% of drugs account for {format_percent(drug_degree['top_10_percent_interaction_share'])} of interactions",
+        f"- Top 10% of targets account for {format_percent(target_degree['top_10_percent_interaction_share'])} of interactions",
+        "",
+        "**Interpretation.** The graph combines extreme pair sparsity with concentrated hubs. Aggregate metrics can "
+        "therefore be dominated by well-connected entities, while low-degree drugs and targets remain the harder cases.",
+        "",
+        "## Knowledge Graph Context",
+        "",
+        f"- Raw KG rows: {kg_summary['raw_triples']:,}",
+        f"- Unique KG triples: {kg_summary['unique_triples']:,}",
+        f"- Duplicate KG triples removed: {kg_summary['duplicate_triples']:,}",
+        f"- Entities: {kg_summary['entities']:,}",
+        f"- Relations: {kg_summary['relations']:,}",
+        f"- Directed entity-pair density: {format_percent(kg_summary['directed_pair_density'])}",
+        f"- Relation-aware density: {kg_summary['relation_aware_density']:.3e}",
+        f"- DTI drug coverage in the KG: {format_percent(kg_summary['dti_drug_coverage'])}",
+        f"- DTI target coverage in the KG: {format_percent(kg_summary['dti_target_coverage'])}",
+        "",
+        "## Descriptor Quality",
+        "",
+        f"- Morgan fingerprints: {int(morgan['rows'])} x {int(morgan['dimensions'])}; "
+        f"zero share={format_percent(morgan['zero_share'])}; "
+        f"mean active bits={morgan['average_nonzero_values_per_row']:.2f}",
+        f"- Protein CTD descriptors: {int(ctd['rows'])} x {int(ctd['dimensions'])}; "
+        f"zero share={format_percent(ctd['zero_share'])}; "
+        f"constant dimensions={int(ctd['constant_dimensions'])}",
+        f"- Missing or infinite values: {int(morgan['missing_values'] + ctd['missing_values'])} missing, "
+        f"{int(morgan['infinite_values'] + ctd['infinite_values'])} infinite",
+        "",
+        "## Warm-Start Settings",
+        "",
+        *split_lines,
+        "## Data Quality Checks",
+        "",
+        *quality_lines,
+        "",
+        "The ten files are repeated warm-start holdouts rather than a disjoint ten-fold partition: "
+        "test sets contain 3,120 unique positives in total, and some positive pairs occur in multiple test folds. "
+        "Accordingly, results should be reported as the mean and standard deviation across repeated splits.",
+        "",
+        "These checks are important because leakage, mislabeled sampled negatives, or incomplete warm-start entity coverage "
+        "would make performance estimates difficult to interpret.",
+        "",
         "## Generated Figures",
         "",
+        "- `figures/dti_degree_distribution.png`",
+        "- `figures/dti_degree_rank.png`",
+        "- `figures/network_sparsity_summary.png`",
+        "- `figures/knowledge_graph_relation_distribution.png`",
+        "- `figures/feature_characteristics.png`",
+        "- `figures/warm_start_class_balance.png`",
+        "- `figures/warm_start_fold_stability.png`",
+        "",
     ]
-    figure_paths = sorted([*figures.glob("*.png"), *figures.glob("*.svg")])
-    for fig in figure_paths:
-        lines.append(f"- `{fig.relative_to(dataset_out)}`")
-    lines.append("")
-    (dataset_out / "analysis_report.md").write_text("\n".join(lines), encoding="utf-8")
-
-
-def comparative_analysis(result_root: Path, datasets: list[str]) -> None:
-    rows = []
-    for dataset in datasets:
-        summary_path = result_root / dataset / "tables" / "dti_network_summary.csv"
-        kg_path = result_root / dataset / "tables" / "kg_summary.csv"
-        if not summary_path.exists():
-            continue
-        row = pd.read_csv(summary_path).iloc[0].to_dict()
-        if kg_path.exists():
-            kg = pd.read_csv(kg_path).tail(1).iloc[0].to_dict()
-            row["kg_triples"] = kg.get("triples", np.nan)
-            row["kg_entities"] = kg.get("entities", np.nan)
-            row["kg_relations"] = kg.get("relations", np.nan)
-        rows.append(row)
-    if not rows:
-        return
-    comparison = pd.DataFrame(rows)
-    comparison.to_csv(result_root / "dataset_comparison.csv", index=False)
-
-    if not HAS_MATPLOTLIB:
-        plot_data = comparison.set_index("dataset")
-        columns = [c for c in ["positive_interactions", "matrix_density", "kg_triples"] if c in plot_data.columns]
-        svg_grouped_bars(result_root / "dataset_comparison.svg", plot_data[columns], "Dataset Comparison")
-        return
-
-    set_plot_style()
-    fig, axes = plt.subplots(1, 3, figsize=(16, 5))
-    comparison.plot(x="dataset", y="positive_interactions", kind="bar", ax=axes[0], legend=False, color="#7C3AED")
-    axes[0].set_title("Positive Interactions")
-    axes[0].set_ylabel("Count")
-    comparison.plot(x="dataset", y="matrix_density", kind="bar", ax=axes[1], legend=False, color="#059669")
-    axes[1].set_title("DTI Matrix Density")
-    axes[1].set_ylabel("Density")
-    if "kg_triples" in comparison.columns:
-        comparison.plot(x="dataset", y="kg_triples", kind="bar", ax=axes[2], legend=False, color="#2563EB")
-        axes[2].set_title("KG Triples")
-        axes[2].set_ylabel("Count")
-    for ax in axes:
-        ax.tick_params(axis="x", rotation=15)
-        ax.grid(True, axis="y", linestyle="--", alpha=0.65)
-    fig.tight_layout()
-    fig.savefig(result_root / "dataset_comparison.png", dpi=220, bbox_inches="tight")
-    plt.close(fig)
-
-
-def analyze_dataset(config: DatasetConfig, output_root: Path, splits: list[str]) -> None:
-    dataset_out = output_root / config.name
-    dirs = ensure_dirs(dataset_out)
-    dti = read_triples(config.dti_path)
-
-    print(f"[{config.name}] DTI network analysis")
-    dti_network_analysis(dti, dirs, config.name)
-
-    print(f"[{config.name}] Knowledge graph analysis")
-    kg_analysis(config, dirs)
-
-    print(f"[{config.name}] Feature analysis")
-    feature_analysis(config, dirs)
-
-    print(f"[{config.name}] Split analysis")
-    split_analysis(config, dirs, splits)
-
-    write_markdown_report(config.name, dataset_out)
-    print(f"[{config.name}] Wrote outputs to {dataset_out}")
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Analyze DTI datasets and generate report-ready figures.")
-    parser.add_argument("--data-root", type=Path, default=Path("data"), help="Dataset root directory.")
-    parser.add_argument("--output-root", type=Path, default=Path("analysis") / "results", help="Output directory.")
-    parser.add_argument("--datasets", nargs="+", default=["yamanishi_08", "BioKG"], help="Datasets to analyze.")
-    parser.add_argument("--splits", nargs="+", default=DEFAULT_SPLITS, help="Fold splits to summarize.")
-    return parser.parse_args()
+    (output_dir / "analysis_report.md").write_text("\n".join(lines), encoding="utf-8")
 
 
 def main() -> None:
     args = parse_args()
-    args.output_root.mkdir(parents=True, exist_ok=True)
-    completed = []
-    for dataset in args.datasets:
-        config = build_config(args.data_root, dataset)
-        analyze_dataset(config, args.output_root, args.splits)
-        completed.append(dataset)
-    comparative_analysis(args.output_root, completed)
-    print(f"Done. Results are under {args.output_root}")
+    figures_dir, tables_dir = prepare_output(args.output_dir)
+
+    print("[1/4] Analyzing the Yamanishi08 DTI graph...")
+    dti, overview, drug_degree, target_degree = analyze_dti(args.data_dir, tables_dir)
+    degree_summary = pd.read_csv(tables_dir / "degree_summary.csv")
+
+    print("[2/4] Analyzing knowledge graph coverage and relation imbalance...")
+    relation_table, kg_summary = analyze_knowledge_graph(args.data_dir, dti, tables_dir)
+
+    print("[3/4] Checking molecular and protein feature blocks...")
+    feature_summary, feature_arrays = analyze_features(args.data_dir, tables_dir)
+
+    print("[4/4] Auditing warm-start 1:1 and 1:10 folds...")
+    fold_stats, split_summary, quality_checks = analyze_warm_start_folds(
+        args.data_dir, dti, tables_dir
+    )
+
+    plot_degree_distributions(drug_degree, target_degree, figures_dir, args.dpi)
+    plot_degree_rank(drug_degree, target_degree, figures_dir, args.dpi)
+    plot_network_summary(overview, degree_summary, figures_dir, args.dpi)
+    plot_kg_relations(relation_table, figures_dir, args.dpi)
+    plot_feature_characteristics(feature_arrays, figures_dir, args.dpi)
+    plot_warm_start_balance(fold_stats, figures_dir, args.dpi)
+    plot_fold_stability(fold_stats, figures_dir, args.dpi)
+    write_report(
+        args.output_dir,
+        overview,
+        degree_summary,
+        kg_summary,
+        feature_summary,
+        split_summary,
+        quality_checks,
+    )
+
+    print(f"Completed. Results written to: {args.output_dir.resolve()}")
 
 
 if __name__ == "__main__":

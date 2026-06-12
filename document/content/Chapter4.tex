@@ -1,140 +1,121 @@
-\chapter{Methodology and Model Design}
+\chapter{Methodology}
 \label{chap:methodology}
 
-\section{Methodological Overview}
+\section{Framework Overview}
 
-Drug--target interaction (DTI) prediction requires the integration of
-heterogeneous biomedical evidence. A drug may be characterized by its chemical
-structure, therapeutic associations, side effects, and known target relations,
-whereas a protein may be characterized by its amino acid sequence, biological
-function, pathway membership, disease associations, and protein--protein
-interactions. A biomedical knowledge graph provides a natural representation
-for these heterogeneous entities and relations, because drugs, proteins,
-diseases, pathways, and other biomedical concepts can be connected through
-typed edges.
+KGE-NFM (Knowledge graph embedding - Neural Factorization Machine) is the main DTI prediction framework studied in this project. It uses
+a two-stage design. First, a knowledge graph encoder learns drug and protein
+representations from biomedical triples. Second, these representations are
+combined with structural descriptors and processed by a Neural Factorization
+Machine (NFM) to predict DTI labels.
 
-The original KGE-NFM framework follows a two-stage design
-\cite{ye2021unified}. In the first stage, a biomedical knowledge graph is used
-to learn low-dimensional representations of drugs, proteins, and other
-biomedical entities. In the second stage, the learned drug and protein
-representations are combined with structural descriptors and used as input to
-a Neural Factorization Machine (NFM) for supervised DTI prediction. The
-original framework can be summarized as:
+This project evaluates two alternative encoder configurations within the same
+framework: DistMult and CompGCN. The remaining stages, including feature
+construction, preprocessing, NFM architecture, and evaluation data, are kept
+consistent to support a controlled encoder comparison.
 
 \begin{equation}
     \text{Biomedical KG}
     \rightarrow
-    \text{DistMult}
+    \left\{
+        \begin{array}{c}
+            \text{DistMult}\\
+            \text{CompGCN}
+        \end{array}
+    \right.
     \rightarrow
-    \text{drug/protein KG embeddings}
-    \rightarrow
-    \text{NFM}
-    \rightarrow
-    \text{DTI prediction}.
-\end{equation}
-
-This report preserves the general KGE + NFM pipeline but modifies the KGE
-component. Specifically, the DistMult-based KGE module is replaced by CompGCN,
-a composition-based multi-relational graph convolutional network
-\cite{vashishth2020composition}. The proposed framework can therefore be
-summarized as:
-
-\begin{equation}
-    \text{Biomedical KG}
-    \rightarrow
-    \text{CompGCN}
-    \rightarrow
-    \text{drug/protein KG embeddings}
+    \text{drug/protein embeddings}
     \rightarrow
     \text{NFM}
     \rightarrow
-    \text{DTI prediction}.
+    \text{DTI probability}.
 \end{equation}
 
-The downstream NFM component is retained. The methodological contribution is
-located in the KG representation learning stage. This modification is motivated
-by the observation that biomedical knowledge graphs are not merely collections
-of independent triples. They are directed, multi-relational, and locally
-structured graphs. Therefore, the KG encoder should ideally exploit not only
-triple-level compatibility, but also relation-aware neighborhood information.
+The first stage operates on a fold-specific biomedical knowledge graph. The
+graph combines supporting biomedical relations with the positive DTI triples
+available in the current training fold. This construction allows drug and
+protein representations to reflect not only direct interaction evidence, but
+also their connections to pathways, functions, domains, diseases, and other
+biomedical entities. Test DTI labels are excluded from this graph so that the
+learned representations do not contain information from the evaluation set.
 
-The remainder of this chapter first formalizes the DTI prediction problem and
-the two-stage learning objective. It then reviews the original DistMult-based
-KGE component, discusses its limitations for directed multi-relational
-biomedical graphs, introduces CompGCN as the updated encoder, and finally
-presents the complete CompGCN-NFM framework.
+DistMult and CompGCN provide two different mechanisms for constructing the KG
+embeddings. DistMult learns entity representations through a diagonal
+bilinear triple-scoring objective. CompGCN additionally enriches entity
+representations through relation-aware neighborhood aggregation. These
+encoders are treated as alternative configurations rather than sequential
+components: a KGE-NFM experiment uses either DistMult embeddings or CompGCN
+embeddings for a given run.
+
+The output of the KGE stage is a separate embedding for the drug and protein
+in each candidate pair. These embeddings represent relational biomedical
+context, but they do not replace intrinsic entity information. The framework
+therefore retains the Morgan fingerprint of the drug and the CTD descriptor
+of the protein as two additional feature fields. Before prediction, all four
+fields are scaled using parameters estimated from the training data, and the
+KG embeddings may optionally be reduced using PCA.
+
+In the second stage, NFM projects the heterogeneous fields into a common
+latent space and applies Bi-Interaction pooling to model pairwise interactions
+among them. Its neural prediction layers then produce the final DTI
+probability. The KGE and NFM stages are trained sequentially rather than as a
+single end-to-end network. Consequently, differences between the two model
+configurations can be attributed primarily to the KG encoder while the
+descriptor fields and downstream predictor remain unchanged. The complete
+data flow is summarized in Figure~\ref{fig:kge_nfm_architecture}.
+
+% Replace document/images/chapter5_overall_architecture.pdf with the final
+% architecture diagram. The image is loaded automatically when it exists.
+\begin{figure}[H]
+\centering
+\IfFileExists{images/chapter5_overall_architecture.pdf}{
+    \includegraphics[
+        width=0.95\textwidth,
+        height=0.78\textheight,
+        keepaspectratio
+    ]{images/chapter5_overall_architecture.pdf}
+}{
+    \fbox{
+        \parbox[c][5.2cm][c]{0.9\textwidth}{
+            \centering
+            \textbf{KGE-NFM architecture placeholder}\\[0.4cm]
+            Biomedical KG $\rightarrow$ DistMult or CompGCN encoder
+            $\rightarrow$ drug/protein embeddings $\rightarrow$ structural
+            descriptors $\rightarrow$ NFM $\rightarrow$ DTI probability\\[0.4cm]
+            Insert: \texttt{images/chapter5\_overall\_architecture.pdf}
+        }
+    }
+}
+\caption{KGE-NFM framework with alternative DistMult and CompGCN encoders}
+\label{fig:kge_nfm_architecture}
+\end{figure}
 
 \section{Problem Formulation}
 
-\subsection{Drug--Target Interaction Prediction}
+\subsection{DTI Prediction Objective}
 
-Let $d$ denote a drug and $p$ denote a protein target. The DTI prediction task
-aims to learn a function that estimates whether $d$ interacts with $p$. Each
-candidate pair has a binary label:
+For a drug $d$ and protein $p$, KGE-NFM estimates:
 
 \begin{equation}
-    y_{dp} \in \{0,1\},
+    \hat{y}_{dp}=F(d,p),
 \end{equation}
-where $y_{dp}=1$ indicates a known drug--target interaction and $y_{dp}=0$
-indicates an unknown or sampled negative interaction. The model outputs an
-interaction probability:
-
-\begin{equation}
-    \hat{y}_{dp}
-    =
-    F(d,p),
-\end{equation}
-where $\hat{y}_{dp}$ denotes the predicted interaction score for the candidate
-pair.
-
-\subsection{Biomedical Knowledge Graph}
-
-The biomedical knowledge graph is defined as:
-
-\begin{equation}
-    \mathcal{G}
-    =
-    (\mathcal{E},\mathcal{R},\mathcal{T}),
-\end{equation}
-where $\mathcal{E}$ is the set of entities, $\mathcal{R}$ is the set of
-relation types, and $\mathcal{T}$ is the set of observed triples. Each triple
-is represented as:
-
-\begin{equation}
-    (h,r,t) \in \mathcal{T},
-\end{equation}
-where $h,t \in \mathcal{E}$ are the head and tail entities, and
-$r \in \mathcal{R}$ is the relation type. In the biomedical setting,
-$\mathcal{E}$ may include drugs, proteins, diseases, pathways, side effects,
-biological processes, molecular functions, protein domains, and other
-biomedical concepts. Relation types may include drug--target interactions,
-drug--drug associations, protein--protein interactions, drug--disease
-associations, and protein--pathway associations.
-
-The knowledge graph provides auxiliary biomedical context beyond the observed
-DTI matrix. This context is especially important because direct DTI
-observations are sparse. For example, a protein with few known drug
-interactions may still be connected to pathways, biological functions, domains,
-and interacting proteins in the KG.
+where $\hat{y}_{dp}$ is the probability that the candidate pair interacts.
+The supervised label is $y_{dp}\in\{0,1\}$.
 
 \subsection{Two-Stage Learning Objective}
 
-The framework uses a two-stage learning strategy. Stage 1 learns a KG
-representation for each entity:
+The first stage learns KG representations using an encoder
+$g_{\theta}$:
 
 \begin{equation}
-    \mathbf{z}_{e}
-    =
-    \operatorname{KGE}(e,\mathcal{G}),
+    \mathbf{z}_{d}=g_{\theta}(d,\mathcal{G}),
     \qquad
-    e \in \mathcal{E}.
+    \mathbf{z}_{p}=g_{\theta}(p,\mathcal{G}),
 \end{equation}
-Here, $\mathbf{z}_{e}$ is the learned KG embedding of entity $e$. In the
-original framework, this representation is obtained using DistMult. In the
-proposed framework, it is obtained using CompGCN.
+where $g_{\theta}$ is instantiated as either DistMult or CompGCN.
 
-Stage 2 predicts DTI labels using the learned drug and protein embeddings
-together with structural descriptors:
+The second stage predicts the DTI label from KG embeddings and structural
+descriptors:
 
 \begin{equation}
     \hat{y}_{dp}
@@ -145,370 +126,257 @@ together with structural descriptors:
         \mathbf{z}_{p},
         \mathbf{s}_{d},
         \mathbf{s}_{p}
-    \right),
-\end{equation}
-where $\mathbf{z}_{d}$ and $\mathbf{z}_{p}$ are the KG embeddings of drug
-$d$ and protein $p$, while $\mathbf{s}_{d}$ and $\mathbf{s}_{p}$ denote drug
-and protein structural descriptors. The proposed modification changes how
-$\mathbf{z}_{d}$ and $\mathbf{z}_{p}$ are learned, while preserving the NFM
-prediction stage.
-
-\section{Knowledge Graph Embedding Background}
-
-\subsection{General KGE Principle}
-
-Knowledge graph embedding is a representation learning approach for
-multi-relational data. A KGE model maps entities and relations into a
-continuous vector space and defines a scoring function:
-
-\begin{equation}
-    f(h,r,t)
-\end{equation}
-to measure the plausibility of a triple $(h,r,t)$. Training encourages
-observed triples to receive higher scores than corrupted triples. For a
-positive triple $(h,r,t)$, negative samples can be generated by replacing the
-head entity:
-
-\begin{equation}
-    (h,r,t)
-    \rightarrow
-    (h',r,t),
-\end{equation}
-or by replacing the tail entity:
-
-\begin{equation}
-    (h,r,t)
-    \rightarrow
-    (h,r,t').
+    \right).
 \end{equation}
 
-The KGE loss can be written as a margin-based ranking objective:
+The two stages are trained sequentially for each cross-validation fold. The
+KGE model is trained first, after which its drug and protein embeddings are
+used as input fields for NFM.
+
+\section{Fold-Specific Knowledge Graph Construction}
+
+\subsection{Supporting Biomedical Triples}
+
+Let $\mathcal{T}_{support}$ denote the biomedical triples that provide context
+beyond the target DTI labels. These triples include pathway, annotation,
+domain, family, interaction, and other relations available in the selected
+dataset.
+
+\subsection{Positive Training DTI Triples}
+
+For each cross-validation fold, positive DTI triples from the training split
+are added to the supporting KG:
 
 \begin{equation}
-    \mathcal{L}_{KGE}
+    \mathcal{T}_{train}^{KGE}
     =
-    \sum_{(h,r,t)\in\mathcal{T}^{+}}
-    \sum_{(h',r,t')\in\mathcal{T}^{-}}
-    \max
-    \left(
-        0,
-        \gamma
-        +
-        f(h',r,t')
-        -
-        f(h,r,t)
-    \right),
-    \label{eq:kge_margin_loss}
+    \mathcal{T}_{support}
+    \cup
+    \mathcal{T}_{DTI,train}^{+}.
+    \label{eq:kge_training_graph}
 \end{equation}
-where $\mathcal{T}^{+}$ denotes observed triples, $\mathcal{T}^{-}$ denotes
-sampled corrupted triples, and $\gamma$ is the margin. The corresponding
-parameter update is:
+
+This construction allows the encoder to learn from both the biomedical graph
+and the DTI evidence available in the current training fold.
+
+\subsection{Negative Sampling}
+
+Negative KGE triples are generated during training by replacing the head or
+tail of a positive triple. Both encoder configurations use basic negative
+sampling and the margin ranking objective in
+Equation~\ref{eq:background_kge_loss}. Keeping the sampling strategy fixed
+reduces confounding factors in the encoder comparison.
+
+\subsection{Inverse Relations}
+
+The CompGCN configuration augments the graph with inverse triples. For an
+original edge $(u,r,v)$, the inverse edge is $(v,r^{-1},u)$. This permits
+information propagation in both directions while preserving the semantic
+distinction between the original and inverse relations. DistMult uses the
+original training triples without graph-convolutional neighborhood expansion.
+
+\subsection{Prevention of Test-Label Leakage}
+
+Only positive DTI triples from the training fold are included in
+$\mathcal{T}_{train}^{KGE}$. Test DTI labels are excluded from KGE and NFM
+training. Preprocessing transformations, including feature scaling and PCA,
+are fitted on training data and then applied to the test fold.
+
+\section{DistMult Encoder}
+
+\subsection{Entity and Relation Representations}
+
+DistMult assigns a vector to every entity and relation
+\cite{yang2015embedding}. For a triple $(h,r,t)$:
 
 \begin{equation}
-    \Theta_{KGE}^{(q+1)}
-    =
-    \Theta_{KGE}^{(q)}
-    -
-    \eta
-    \nabla_{\Theta_{KGE}}
-    \mathcal{L}_{KGE},
-    \label{eq:kge_update}
-\end{equation}
-where $\Theta_{KGE}$ denotes KGE parameters and $\eta$ is the learning rate.
-
-\subsection{Role of KGE in DTI Prediction}
-
-In DTI prediction, KGE is used to summarize the biomedical context of drugs
-and proteins. The embedding of a protein may encode information about related
-pathways, biological functions, diseases, domains, and interacting proteins.
-The embedding of a drug may encode information about related targets,
-diseases, side effects, therapeutic classes, and drug--drug relations.
-
-These KG-derived representations complement structural features such as
-chemical fingerprints and protein sequence descriptors. Within the original
-KGE-NFM framework, this representation learning stage is implemented using
-DistMult, a bilinear knowledge graph embedding model known for its simplicity
-and computational efficiency \cite{yang2015embedding}.
-
-\section{Original KGE Component: DistMult}
-
-\subsection{DistMult Representation Assumption}
-
-DistMult assigns a vector representation to each entity and relation. For a
-triple $(h,r,t)$, the head entity, relation, and tail entity are represented
-as:
-
-\begin{equation}
-    \mathbf{h}, \mathbf{r}, \mathbf{t}
+    \mathbf{h},\mathbf{r},\mathbf{t}
     \in
     \mathbb{R}^{k}.
 \end{equation}
 
-DistMult can be viewed as a simplified bilinear model. A full bilinear model
-uses a relation-specific matrix $\mathbf{M}_{r}$:
-
-\begin{equation}
-    f_{\text{bilinear}}(h,r,t)
-    =
-    \mathbf{h}^{\top}
-    \mathbf{M}_{r}
-    \mathbf{t}.
-\end{equation}
-
-DistMult restricts the relation matrix to be diagonal:
-
-\begin{equation}
-    \mathbf{M}_{r}
-    =
-    \operatorname{diag}(\mathbf{r}).
-\end{equation}
-This assumption greatly reduces the number of trainable parameters for each
-relation.
+Its trainable parameters are the entity embedding matrix and relation
+embedding matrix. No explicit neighborhood aggregation is performed.
 
 \subsection{DistMult Scoring Function}
 
-The DistMult scoring function is:
+DistMult scores a triple using a diagonal bilinear interaction:
 
 \begin{equation}
-    f_{\text{DM}}(h,r,t)
+    f_{\mathrm{DM}}(h,r,t)
     =
     \mathbf{h}^{\top}
     \operatorname{diag}(\mathbf{r})
-    \mathbf{t}.
-    \label{eq:distmult_score_matrix}
-\end{equation}
-Equivalently, it can be written as a dimension-wise multiplicative interaction:
-
-\begin{equation}
-    f_{\text{DM}}(h,r,t)
+    \mathbf{t}
     =
-    \sum_{i=1}^{k}
-    h_i r_i t_i.
-    \label{eq:distmult_score_sum}
+    \sum_{i=1}^{k}h_i r_i t_i.
+    \label{eq:distmult_score}
 \end{equation}
 
-Equations~\ref{eq:distmult_score_matrix} and
-\ref{eq:distmult_score_sum} show that the score is computed by matching the
-same embedding dimensions of the head and tail entities under relation-specific
-weights. This design avoids using a full $k \times k$ relation matrix and
-therefore reduces computational and parameter cost.
+The diagonal form provides an efficient relation-dependent compatibility score
+without requiring a full $k\times k$ matrix for every relation.
 
-\subsection{Rationale for Using DistMult in the Original Framework}
+\subsection{KGE Training Objective}
 
-DistMult is a reasonable KGE choice for the original KGE-NFM framework because
-it is simple, scalable, and capable of producing compact embeddings for
-entities and relations. Its diagonal bilinear form is suitable for relatively
-large biomedical KGs, where learning a full matrix for every relation would be
-expensive. The output entity embeddings can also be directly used as input
-features for the downstream NFM module.
+The DistMult score in Equation~\ref{eq:distmult_score} is substituted into the
+margin ranking loss in Equation~\ref{eq:background_kge_loss}. The model is
+trained with Adam and basic negative sampling so that positive triples receive
+higher scores than corrupted triples.
 
-In the original framework, DistMult is not used as the final DTI classifier.
-Rather, it is used to extract KG-based drug and protein representations:
+\subsection{Drug and Protein Embedding Extraction}
+
+After KGE training, drug and protein representations are read from the learned
+entity embedding table:
 
 \begin{equation}
-    \mathbf{z}_{d}
-    =
-    \operatorname{DistMult}(d),
+    \mathbf{z}_{d}^{DM}=\mathbf{E}[d],
     \qquad
-    \mathbf{z}_{p}
-    =
-    \operatorname{DistMult}(p).
+    \mathbf{z}_{p}^{DM}=\mathbf{E}[p].
 \end{equation}
 
-Nevertheless, the same assumptions that make DistMult efficient also restrict
-its expressiveness when the underlying graph contains directed and
-semantically diverse biomedical relations.
+These vectors form the KG fields of the DistMult-based KGE-NFM configuration.
 
-\section{Limitations of DistMult and Motivation for the Update}
+\subsection{Advantages and Structural Limitations}
 
-\subsection{Symmetric Scoring and Directionality Limitation}
-
-The DistMult score is symmetric with respect to the head and tail entities:
+DistMult is computationally efficient, scalable, and provides compact entity
+representations. However, its score is symmetric for a fixed relation:
 
 \begin{equation}
-    f_{\text{DM}}(h,r,t)
+    f_{\mathrm{DM}}(h,r,t)
     =
-    f_{\text{DM}}(t,r,h).
-    \label{eq:distmult_symmetry}
+    f_{\mathrm{DM}}(t,r,h).
 \end{equation}
 
-This property follows from the commutativity of element-wise multiplication in
-Equation~\ref{eq:distmult_score_sum}. Although this symmetry can be acceptable
-for some relations, it creates a structural mismatch for biomedical KGs. Many
-biomedical relations are directional or asymmetric. For example,
-\textit{drug targets protein}, \textit{drug treats disease}, and
-\textit{protein participates in pathway} are not semantically equivalent to
-their reversed forms. A scoring function that is symmetric for a fixed relation
-cannot explicitly distinguish these directional roles.
+It also learns through triple-level scoring without explicitly aggregating
+relation-aware neighborhoods. These properties motivate evaluating CompGCN as
+an alternative encoder within the same KGE-NFM framework.
 
-\subsection{Lack of Explicit Neighborhood Aggregation}
+\section{CompGCN Encoder}
 
-DistMult learns embeddings through triple-level scoring, but it does not
-explicitly aggregate information from the local neighborhood of an entity. This
-is important because the biomedical meaning of a drug or protein is often
-contextual. A protein may be characterized by its related pathways, domains,
-diseases, and interacting proteins. A drug may be characterized by its targets,
-side effects, therapeutic classes, and related diseases.
+\subsection{Graph Augmentation}
 
-For DTI prediction, it is therefore desirable for the KG encoder to update
-entity representations using relation-aware neighborhood information rather
-than relying only on independent triple scoring. This limitation motivates a
-graph encoder that treats the KG as a structured multi-relational graph rather
-than only as a set of independent triples.
-
-\subsection{Limited Use of Relation Embeddings}
-
-In DistMult, relation embeddings mainly act as parameters inside the scoring
-function. They determine the dimension-wise compatibility between a head entity
-and a tail entity, but they do not explicitly define how messages from
-neighboring entities should be transformed or propagated.
-
-This is restrictive for multi-relational biomedical graphs because different
-relation types should contribute different kinds of evidence. A drug connected
-to a disease relation and a drug connected to a target relation should not
-receive the same type of relational signal. Similarly, protein--pathway and
-protein--protein relations should affect protein representations differently.
-
-\subsection{Requirements for an Improved KGE Encoder}
-
-The preceding limitations suggest that an improved KGE encoder should preserve
-relation direction, distinguish relation types, jointly represent entities and
-relations, incorporate local graph neighborhood structure, and produce
-embeddings compatible with the downstream NFM module.
-
-These considerations motivate the replacement of DistMult with a relational
-graph encoder. In this work, CompGCN is adopted because it directly
-incorporates relation type and edge direction into the message-passing process
-while jointly updating entity and relation representations.
-
-\section{Updated KGE Component: CompGCN}
-
-\subsection{Overview of CompGCN}
-
-CompGCN is a multi-relational graph convolutional framework designed for
-knowledge graphs \cite{vashishth2020composition}. In contrast to DistMult,
-CompGCN does not learn entity embeddings only through isolated triple scores.
-Instead, it updates each entity representation by aggregating messages from its
-relational neighbors. The message from a neighbor is conditioned on both the
-neighboring entity and the relation connecting that neighbor to the target
-node.
-
-This design is suitable for the present framework because biomedical KGs
-contain relation labels and edge directions that carry biological meaning.
-CompGCN jointly models entities and relations and uses a composition function
-to combine neighboring entity embeddings with relation embeddings before
-message passing.
-
-\subsection{Graph Augmentation with Directional Edges}
-
-For every original edge:
+CompGCN is a multi-relational graph convolutional encoder
+\cite{vashishth2020composition}. Unlike a standard GCN, it must account for
+both the semantic type and direction of every edge. For each original triple:
 
 \begin{equation}
     (u,r,v),
 \end{equation}
-CompGCN introduces an inverse edge:
+
+the graph is augmented with an inverse triple:
 
 \begin{equation}
     (v,r^{-1},u),
 \end{equation}
-and a self-loop relation:
 
-\begin{equation}
-    (u,\top,u).
-\end{equation}
+and a self-loop relation is associated with each entity. The resulting
+relation set contains original relations, inverse relations, and a self-loop
+relation. Original edges preserve the observed direction, inverse edges permit
+information to propagate in the reverse direction, and self-loops retain the
+entity's own representation during aggregation. In the implementation,
+inverse triples are created when the CompGCN triples factory is constructed.
 
-Original edges preserve the observed direction of the relation. Inverse edges
-allow information to flow in the reverse direction. Self-loops preserve the
-node's own information during message passing. This augmentation directly
-addresses the directionality limitation of DistMult by allowing the model to
-distinguish original, inverse, and self-loop messages.
+At layer $k$, CompGCN maintains an entity representation
+$\mathbf{h}_{v}^{k}$ for every entity $v$ and a relation representation
+$\mathbf{h}_{r}^{k}$ for every relation $r$. Thus, relations are learned
+components of the encoder rather than fixed edge labels.
 
 \subsection{Entity--Relation Composition}
 
-The message sent from a neighboring entity is relation-dependent. For a
-neighbor $u$ connected through relation $r$, CompGCN first computes:
+Before aggregation, a neighboring entity representation is composed with the
+relation embedding:
+
+\begin{equation}
+    \mathbf{m}_{u,r}^{k}
+    =
+    \phi
+    \left(
+        \mathbf{h}_{u}^{k},
+        \mathbf{h}_{r}^{k}
+    \right).
+\end{equation}
+
+The implementation supports subtraction, element-wise multiplication, and
+circular correlation. These operators correspond to different assumptions
+about how a relation modifies an entity representation:
+
+\begin{align}
+    \phi_{sub}(\mathbf{h}_{u},\mathbf{h}_{r})
+    &=
+    \mathbf{h}_{u}-\mathbf{h}_{r}, \\
+    \phi_{mult}(\mathbf{h}_{u},\mathbf{h}_{r})
+    &=
+    \mathbf{h}_{u}\odot\mathbf{h}_{r}, \\
+    \phi_{corr}(\mathbf{h}_{u},\mathbf{h}_{r})
+    &=
+    \mathbf{h}_{u}\star\mathbf{h}_{r},
+\end{align}
+where $\odot$ denotes element-wise multiplication and $\star$ denotes circular
+correlation. Subtraction follows a translation-style interpretation,
+multiplication applies relation-dependent feature gating, and circular
+correlation captures interactions across embedding dimensions. The main
+configuration uses multiplication:
 
 \begin{equation}
     \phi
     \left(
         \mathbf{h}_{u}^{k},
         \mathbf{h}_{r}^{k}
-    \right),
-\end{equation}
-where $\mathbf{h}_{u}^{k}$ is the embedding of entity $u$ at layer $k$,
-$\mathbf{h}_{r}^{k}$ is the embedding of relation $r$ at layer $k$, and
-$\phi$ is an entity--relation composition operator.
-
-Common composition choices include subtraction:
-
-\begin{equation}
-    \phi(\mathbf{h}_{u},\mathbf{h}_{r})
+    \right)
     =
-    \mathbf{h}_{u}
-    -
-    \mathbf{h}_{r},
-\end{equation}
-element-wise multiplication:
-
-\begin{equation}
-    \phi(\mathbf{h}_{u},\mathbf{h}_{r})
-    =
-    \mathbf{h}_{u}
-    \odot
-    \mathbf{h}_{r},
-\end{equation}
-and circular correlation:
-
-\begin{equation}
-    \phi(\mathbf{h}_{u},\mathbf{h}_{r})
-    =
-    \mathbf{h}_{u}
-    \star
-    \mathbf{h}_{r}.
+    \mathbf{h}_{u}^{k}\odot\mathbf{h}_{r}^{k}.
 \end{equation}
 
-This composition operation allows the same neighboring entity to contribute
-different messages under different relation types. In this project, the main
-CompGCN configuration uses element-wise multiplication, which preserves the
-multiplicative relational interaction used by DistMult while embedding it
-inside a graph convolutional update.
+Consequently, the same neighboring entity can send different messages through
+different relations. This is the central distinction between CompGCN and a
+relation-agnostic graph convolution.
 
-\subsection{CompGCN Node Update}
+\subsection{Node Representation Update}
 
-The CompGCN node update is:
+The representation of node $v$ is updated by aggregating composed messages:
 
 \begin{equation}
     \mathbf{h}_{v}^{k+1}
     =
     \sigma
     \left(
-        \sum_{(u,r)\in \mathcal{N}(v)}
+        \sum_{(u,r)\in\mathcal{N}(v)}
         \mathbf{W}_{\lambda(r)}^{k}
         \phi
         \left(
             \mathbf{h}_{u}^{k},
             \mathbf{h}_{r}^{k}
         \right)
-    \right).
+    \right),
     \label{eq:compgcn_node_update}
 \end{equation}
+where $\mathcal{N}(v)$ is the relational neighborhood of $v$,
+$\mathbf{W}_{\lambda(r)}^{k}$ is selected according to edge direction, and
+$\sigma$ is a nonlinear activation. The direction function is defined as:
 
-In Equation~\ref{eq:compgcn_node_update}, $\mathcal{N}(v)$ denotes the set of
-relational neighbors of node $v$, $\mathbf{h}_{u}^{k}$ is the embedding of
-neighbor $u$ at layer $k$, $\mathbf{h}_{r}^{k}$ is the embedding of relation
-$r$, and $\phi$ composes the neighbor and relation embeddings.
-$\mathbf{W}_{\lambda(r)}^{k}$ is a direction-specific transformation matrix,
-and $\sigma$ is a nonlinear activation function. The function $\lambda(r)$
-identifies whether the edge is original, inverse, or self-loop. Therefore, the
-model can transform messages differently depending on edge direction.
+\begin{equation}
+    \lambda(r)
+    \in
+    \{O,I,S\},
+\end{equation}
+where $O$, $I$, and $S$ indicate original, inverse, and self-loop edges,
+respectively. The corresponding transformations are
+$\mathbf{W}_{O}^{k}$, $\mathbf{W}_{I}^{k}$, and $\mathbf{W}_{S}^{k}$.
+CompGCN therefore does not require a separate full transformation matrix for
+every relation. Relation-specific semantics are carried by
+$\mathbf{h}_{r}^{k}$ and the composition function, while the transformation
+matrices are shared according to edge direction. This design limits parameter
+growth when the graph contains many relation types.
 
-Compared with DistMult, this update introduces an explicit mechanism for
-incorporating relation-aware neighborhood structure into entity
-representations.
+Stacking $L$ CompGCN layers repeats this update using the representations from
+the preceding layer. The final entity representation
+$\mathbf{h}_{v}^{L}$ therefore incorporates relation-conditioned information
+from an $L$-hop neighborhood, subject to the graph connectivity and learned
+transformations.
 
-\subsection{CompGCN Relation Update}
+\subsection{Relation Representation Update}
 
-CompGCN also updates relation embeddings across layers:
+Relation embeddings are updated at each CompGCN layer:
 
 \begin{equation}
     \mathbf{h}_{r}^{k+1}
@@ -518,17 +386,56 @@ CompGCN also updates relation embeddings across layers:
     \label{eq:compgcn_relation_update}
 \end{equation}
 
-Equation~\ref{eq:compgcn_relation_update} keeps relation representations
-aligned with the evolving entity embedding space. Thus, relation embeddings are
-not static labels; they remain part of the representation learning process.
+This update keeps relation representations aligned with the evolving entity
+embedding space. Entity and relation states therefore evolve together across
+the encoder. The trainable parameters include the initial entity and relation
+representations, the direction-specific matrices at each layer, and the
+relation transformation matrices.
 
-\subsection{Link Prediction Decoder}
-
-CompGCN serves as an encoder. After message passing, it produces updated
-entity and relation embeddings. A decoder is then used to score triples:
+The original CompGCN formulation also proposes basis decomposition for graphs
+with many relations. A relation embedding can be represented as:
 
 \begin{equation}
-    f(h,r,t)
+    \mathbf{h}_{r}^{0}
+    =
+    \sum_{b=1}^{B}
+    \alpha_{br}\mathbf{v}_{b},
+\end{equation}
+where $\mathbf{v}_{b}$ is a learned basis vector and $\alpha_{br}$ is the
+coefficient of basis $b$ for relation $r$. This reduces relation-embedding
+parameters. Basis decomposition is part of the general CompGCN method; the
+project configuration primarily controls embedding dimension, layer count,
+dropout, and composition operator through PyKEEN.
+
+% Replace document/images/chapter5_compgcn_message_passing.pdf with the final
+% CompGCN neighborhood aggregation diagram.
+\begin{figure}[H]
+\centering
+\IfFileExists{images/chapter5_compgcn_message_passing.pdf}{
+    \includegraphics[width=0.9\textwidth]{images/chapter5_compgcn_message_passing.pdf}
+}{
+    \fbox{
+        \parbox[c][5.2cm][c]{0.86\textwidth}{
+            \centering
+            \textbf{CompGCN message-passing diagram placeholder}\\[0.4cm]
+            Show original, inverse, and self-loop messages transformed through
+            $\mathbf{W}_{\lambda(r)}\phi(\mathbf{h}_u,\mathbf{h}_r)$.\\[0.4cm]
+            Insert: \texttt{images/chapter5\_compgcn\_message\_passing.pdf}
+        }
+    }
+}
+\caption{Relation-aware message passing in the CompGCN encoder}
+\label{fig:compgcn_message_passing}
+\end{figure}
+
+\subsection{Link-Prediction Decoder}
+
+CompGCN acts as an encoder that produces enriched entity and relation
+representations. These representations are passed to a KGE decoder that assigns
+a plausibility score to each triple:
+
+\begin{equation}
+    f_{CG}(h,r,t)
     =
     \operatorname{Dec}
     \left(
@@ -538,352 +445,185 @@ entity and relation embeddings. A decoder is then used to score triples:
     \right).
 \end{equation}
 
-To maintain a controlled comparison with the original framework, the decoder
-can be written in a DistMult-style form:
+The CompGCN paper treats the encoder and decoder as separate components and
+evaluates the encoder with TransE, DistMult, and ConvE scoring functions. This
+separation is important: CompGCN determines how entity and relation
+representations are enriched through graph convolution, whereas the decoder
+determines how the resulting representations are scored for link prediction.
+
+In this project, the PyKEEN CompGCN model supplies the link-prediction score
+used during KGE training. The full encoder--decoder model is optimized with the
+same margin ranking loss, Adam optimizer, and basic negative-sampling strategy
+used for the DistMult configuration. Holding the training objective constant
+allows the experiment to focus on the effect of relation-aware representation
+learning.
+
+\subsection{Drug and Protein Embedding Extraction}
+
+After the final CompGCN layer, enriched drug and protein embeddings are
+extracted:
 
 \begin{equation}
-    f(h,r,t)
+    \mathbf{z}_{d}^{CG}=\mathbf{h}_{d}^{L},
+    \qquad
+    \mathbf{z}_{p}^{CG}=\mathbf{h}_{p}^{L}.
+\end{equation}
+
+These embeddings form the KG fields of the CompGCN-based KGE-NFM
+configuration. The downstream feature construction and NFM predictor remain
+the same as in the DistMult configuration. Thus, CompGCN is used as a
+representation encoder inside KGE-NFM rather than as the final DTI classifier.
+
+\section{Drug--Target Feature Construction}
+
+\subsection{Drug and Protein KG Embeddings}
+
+For either encoder, the candidate pair contains separate drug and protein KG
+fields, $\mathbf{z}_{d}$ and $\mathbf{z}_{p}$. Keeping them separate allows
+NFM to learn interactions between the two entity representations instead of
+merging them before prediction.
+
+\subsection{Morgan Fingerprints}
+
+Each drug is represented by a Morgan fingerprint
+$\mathbf{s}_{d}\in\mathbb{R}^{1024}$. The binary fingerprint encodes local
+molecular substructures and supplies intrinsic chemical information that is
+not directly represented by the KG embedding.
+
+\subsection{Protein CTD Descriptors}
+
+Each target protein is represented by a CTD descriptor
+$\mathbf{s}_{p}\in\mathbb{R}^{147}$. CTD features summarize the composition,
+transition, and distribution of amino acid property groups.
+
+\subsection{Feature Scaling and Optional PCA}
+
+All feature fields are scaled using parameters fitted on the training fold.
+PCA can optionally reduce the drug and protein KG embeddings. PCA is fitted
+separately on the training embeddings and applied unchanged to the test
+embeddings, preventing test-data leakage.
+
+\subsection{Final Pair Representation}
+
+The four default KGE-NFM fields are:
+
+\begin{equation}
+    \mathcal{F}_{dp}
     =
-    \mathbf{h}^{\top}
-    \operatorname{diag}(\mathbf{r})
-    \mathbf{t}.
-    \label{eq:compgcn_distmult_decoder}
+    \left\{
+        \mathbf{z}_{d},
+        \mathbf{z}_{p},
+        \mathbf{s}_{d},
+        \mathbf{s}_{p}
+    \right\}.
+    \label{eq:kge_nfm_fields}
 \end{equation}
 
-The original KGE module consists of trainable entity and relation embeddings
-with DistMult scoring. The updated KGE module uses a CompGCN encoder to
-generate relation-aware entity and relation embeddings before triple scoring.
-The key improvement is therefore in how the embeddings are generated, not in
-replacing the downstream DTI classifier.
-
-\section{Construction of DTI Pair Features}
-
-\subsection{Extracting Drug and Protein KG Embeddings}
-
-After the KGE stage, each drug $d$ and protein $p$ has a learned embedding:
-
-\begin{equation}
-    \mathbf{z}_{d},
-    \mathbf{z}_{p}.
-\end{equation}
-
-For a candidate DTI pair, the KG-based feature is constructed as:
-
-\begin{equation}
-    \mathbf{x}_{KG}(d,p)
-    =
-    [
-    \mathbf{z}_{d}
-    \mathbin{\Vert}
-    \mathbf{z}_{p}
-    ],
-    \label{eq:kg_pair_feature}
-\end{equation}
-where $\mathbin{\Vert}$ denotes concatenation. In the original framework,
-these embeddings are obtained from DistMult. In the proposed framework, they
-are generated by CompGCN.
-
-\subsection{Incorporating Structural Descriptors}
-
-KG embeddings capture relational biomedical context, but DTI prediction may
-also benefit from intrinsic drug and protein information. Let
-$\mathbf{s}_{d}$ denote the drug structural descriptor, such as Morgan
-fingerprints, and let $\mathbf{s}_{p}$ denote the protein descriptor, such as
-CTD or other sequence-derived descriptors. The final input representation is:
+Conceptually, their concatenated representation is:
 
 \begin{equation}
     \mathbf{x}_{dp}
     =
     [
-    \mathbf{z}_{d}
-    \mathbin{\Vert}
-    \mathbf{z}_{p}
-    \mathbin{\Vert}
-    \mathbf{s}_{d}
-    \mathbin{\Vert}
-    \mathbf{s}_{p}
-    ].
-    \label{eq:dti_pair_feature}
+        \mathbf{z}_{d}
+        \mathbin{\Vert}
+        \mathbf{z}_{p}
+        \mathbin{\Vert}
+        \mathbf{s}_{d}
+        \mathbin{\Vert}
+        \mathbf{s}_{p}
+    ],
 \end{equation}
+although the implemented NFM processes these inputs as separate feature fields.
 
-Equation~\ref{eq:dti_pair_feature} combines heterogeneous KG information with
-structural information. The KG embeddings summarize graph context, while the
-drug and protein descriptors provide direct molecular and sequence-level
-evidence.
+\section{Neural Factorization Machine}
 
-\section{Neural Factorization Machine for DTI Prediction}
+\subsection{Feature-Field Projection}
 
-\subsection{Motivation for Using NFM}
-
-The final feature vector contains multiple heterogeneous feature groups. Their
-interactions are important for predicting DTI. For example, the drug KG
-embedding may interact with the protein KG embedding, the drug fingerprint may
-interact with the protein descriptor, and graph-derived drug context may
-interact with sequence-derived protein information.
-
-NFM is used because it explicitly models second-order feature interactions
-through Bi-Interaction pooling and further captures nonlinear higher-order
-patterns through neural layers \cite{he2017neural}. This design preserves the
-original KGE-NFM philosophy: KG embeddings provide biomedical context, while
-NFM learns how this context interacts with structural features.
-
-\subsection{NFM Prediction Function}
-
-Given an input feature vector $\mathbf{x}$, the NFM prediction function is:
+The project uses a field-based NFM implementation derived from the NFM
+principle in \cite{he2017neural}. Each input field
+$\mathbf{x}_{dp}^{(m)}\in\mathbb{R}^{D_m}$ is projected into a shared latent
+dimension:
 
 \begin{equation}
-    \hat{y}(\mathbf{x})
+    \mathbf{u}_{m}
     =
-    w_0
-    +
-    \sum_{i=1}^{n}
-    w_i x_i
-    +
-    f(\mathbf{x}),
-    \label{eq:nfm_prediction}
+    \mathbf{P}_{m}\mathbf{x}_{dp}^{(m)}+\mathbf{b}_{m}.
+    \label{eq:nfm_field_projection}
 \end{equation}
-where $w_0$ is the global bias, $w_i$ models the first-order contribution of
-feature $i$, and $f(\mathbf{x})$ represents the nonlinear interaction
-component. The first two terms preserve the linear part of factorization
-machines, while $f(\mathbf{x})$ models feature interactions.
+
+This projection makes KG embeddings, fingerprints, and CTD descriptors
+compatible for field-level interaction modeling.
 
 \subsection{Bi-Interaction Pooling}
 
-Let $\mathbf{v}_i$ denote the embedding vector of feature $i$. NFM constructs a
-set of scaled feature embeddings and applies Bi-Interaction pooling:
+The projected fields are combined using Bi-Interaction pooling:
 
 \begin{equation}
-    f_{BI}(\mathcal{V}_{x})
+    \mathbf{f}_{BI}
     =
-    \sum_{i=1}^{n}
-    \sum_{j=i+1}^{n}
-    x_i\mathbf{v}_i
-    \odot
-    x_j\mathbf{v}_j.
-    \label{eq:nfm_bi_pooling}
+    \frac{1}{2}
+    \left[
+        \left(
+            \sum_{m=1}^{M}\mathbf{u}_{m}
+        \right)^2
+        -
+        \sum_{m=1}^{M}\mathbf{u}_{m}^{2}
+    \right].
+    \label{eq:nfm_bi_interaction}
 \end{equation}
 
-The operator $\odot$ denotes element-wise multiplication. This layer summarizes
-pairwise interactions among features into a single vector, which is then
-passed into a multi-layer neural network.
+This operation summarizes pairwise interactions among drug KG, protein KG,
+drug structure, and protein descriptor fields.
 
-\subsection{Hidden Layers and Final Prediction}
+\subsection{Hidden Layers}
 
-The hidden layer transformation is:
+The interaction vector is processed by fully connected hidden layers:
 
 \begin{equation}
-    \mathbf{z}_{1}
+    \mathbf{a}^{(l+1)}
     =
-    \sigma
+    \operatorname{ReLU}
     \left(
-        \mathbf{W}_{1}
-        f_{BI}
-        +
-        \mathbf{b}_{1}
+        \mathbf{W}^{(l)}\mathbf{a}^{(l)}+\mathbf{b}^{(l)}
     \right),
 \end{equation}
-and for deeper layers:
+where $\mathbf{a}^{(0)}=\mathbf{f}_{BI}$. Dropout can be applied after hidden
+activations as regularization.
+
+\subsection{DTI Prediction Function}
+
+The final logit combines field-level linear terms and the nonlinear interaction
+network:
 
 \begin{equation}
-    \mathbf{z}_{l}
+    o_{dp}
     =
-    \sigma
+    \sum_{m=1}^{M}
     \left(
-        \mathbf{W}_{l}
-        \mathbf{z}_{l-1}
-        +
-        \mathbf{b}_{l}
-    \right).
+        \mathbf{a}_{m}^{\top}\mathbf{x}_{dp}^{(m)}+c_m
+    \right)
+    +
+    \operatorname{MLP}(\mathbf{f}_{BI}).
 \end{equation}
 
-The final binary prediction is:
+The predicted DTI probability is:
 
 \begin{equation}
-    \hat{y}_{dp}
-    =
-    \operatorname{sigmoid}
-    \left(
-        \mathbf{p}^{\top}
-        \mathbf{z}_{L}
-    \right).
-    \label{eq:nfm_final_prediction}
+    \hat{y}_{dp}=\operatorname{sigmoid}(o_{dp}).
 \end{equation}
 
-Equation~\ref{eq:nfm_final_prediction} gives the probability that the
-candidate drug--protein pair interacts. During supervised training, the NFM
-parameters are optimized with binary cross-entropy:
+\subsection{Binary Classification Objective}
+
+NFM is optimized using binary cross-entropy:
 
 \begin{equation}
     \mathcal{L}_{DTI}
     =
-    -
-    \frac{1}{N}
+    -\frac{1}{N}
     \sum_{i=1}^{N}
     \left[
-        y_i \log(\hat{y}_i)
-        +
-        (1-y_i)
-        \log(1-\hat{y}_i)
+        y_i\log(\hat{y}_i)
+        +(1-y_i)\log(1-\hat{y}_i)
     \right].
-    \label{eq:dti_bce_loss}
 \end{equation}
-
-\section{Final Proposed CompGCN-NFM Framework}
-
-\subsection{Complete Pipeline}
-
-The final method is a stage-wise framework. First, a biomedical knowledge graph
-is constructed from DTI and supporting biomedical relations. The graph is then
-augmented with inverse and self-loop edges so that direction-aware message
-passing can be performed. CompGCN is trained to learn relation-aware
-representations of drugs, proteins, and other biomedical entities. After
-training, the drug and protein embeddings are extracted from the CompGCN
-encoder. These embeddings are concatenated with drug and protein structural
-descriptors to form the DTI pair representation. The final feature vector is
-then passed into NFM, which learns feature interactions and predicts the binary
-DTI label.
-
-The procedure can be summarized as:
-
-\begin{enumerate}
-    \item Construct a biomedical knowledge graph from DTI and supporting
-    biomedical relations.
-    \item Augment the graph with inverse and self-loop edges.
-    \item Train CompGCN to learn relation-aware drug and protein embeddings.
-    \item Extract drug and protein embeddings from the trained CompGCN encoder.
-    \item Concatenate these embeddings with drug and protein structural
-    descriptors.
-    \item Feed the final DTI pair feature vector into NFM.
-    \item Train the NFM model for binary DTI prediction.
-\end{enumerate}
-
-\subsection{Difference from the Original KGE-NFM Framework}
-
-Table~\ref{tab:distmult_compgcn_update} summarizes the methodological
-difference between the original KGE-NFM framework and the proposed
-CompGCN-NFM framework.
-
-\begin{table}[H]
-\centering
-\caption{Comparison between original KGE-NFM and proposed CompGCN-NFM}
-\label{tab:distmult_compgcn_update}
-\small
-\begin{tabularx}{\textwidth}{lXX}
-\toprule
-\textbf{Component} & \textbf{Original KGE-NFM} & \textbf{Proposed CompGCN-NFM} \\
-\midrule
-KG representation model
-& DistMult
-& CompGCN \\
-Entity representation learning
-& Triple-level scoring
-& Relation-aware message passing \\
-Relation direction
-& Limited by symmetric scoring
-& Original and inverse relations are explicitly modeled \\
-Neighborhood structure
-& Not explicitly aggregated
-& Aggregated through graph convolution \\
-Relation embedding role
-& Used mainly in triple scoring
-& Used in entity--relation message composition \\
-Downstream DTI predictor
-& NFM
-& NFM \\
-Structural descriptors
-& Used
-& Used \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-The proposed framework does not discard the original KGE-NFM design. Instead,
-it retains the NFM-based feature interaction module and modifies the KG
-representation stage. This allows the framework to benefit from the original
-multimodal integration strategy while using a more expressive encoder for
-directed multi-relational biomedical graphs.
-
-\subsection{Expected Benefit in Cold-Start Scenarios}
-
-Cold-start DTI prediction is difficult because some drugs or proteins have no
-observed DTI links in the training set. However, these entities may still have
-other biomedical relations in the KG. Since CompGCN aggregates information
-from relational neighborhoods, it may produce more informative embeddings for
-such entities than a purely triple-scoring KGE model.
-
-The proposed update is expected to be particularly useful in cold-start
-scenarios, where direct DTI evidence is sparse but auxiliary KG relations
-remain available. This expectation is methodological rather than a substitute
-for empirical validation; the experimental chapter evaluates whether the
-proposed representation update improves predictive performance.
-
-\section{Model Configuration and Implementation Details}
-
-The implementation uses PyKEEN for KGE training and a local PyTorch
-implementation of NFM for supervised DTI prediction. Table~\ref{tab:model_configuration}
-summarizes the main configuration used in this report.
-
-\begin{table}[H]
-\centering
-\caption{Model configuration and implementation details}
-\label{tab:model_configuration}
-\small
-\begin{tabularx}{\textwidth}{lX}
-\toprule
-\textbf{Item} & \textbf{Configuration} \\
-\midrule
-KG entity types
-& Drugs, proteins, genes, pathways, functions, domains, families, diseases,
-side effects, and related biomedical concepts \\
-KG relation types
-& Drug--target, drug--drug, protein--protein, drug--disease,
-protein--pathway, annotation, domain, family, and functional relations \\
-Yamanishi08 KG size
-& 25,487 entities, 48 relations, and 95,672 triples \\
-BioKG size
-& 101,847 entities, 13 relations, and 2,017,795 triples \\
-KGE baseline
-& DistMult \\
-Proposed KGE encoder
-& CompGCN \\
-Decoder
-& DistMult-style scoring for controlled KGE comparison \\
-Embedding dimension
-& 400 \\
-CompGCN layers
-& 2--3 depending on experiment setting \\
-Composition operator
-& Element-wise multiplication, \texttt{mult} \\
-Negative sampling
-& Basic negative sampling during KGE training \\
-KGE optimizer and loss
-& Adam optimizer with margin ranking loss \\
-Drug descriptor
-& Morgan fingerprint \\
-Protein descriptor
-& CTD sequence descriptor \\
-NFM hidden layer sizes
-& 128, 128 \\
-Activation function
-& ReLU in NFM hidden layers \\
-Dropout
-& 0.0--0.2 depending on experiment setting \\
-NFM optimizer and loss
-& Adam optimizer with binary cross-entropy objective \\
-Learning rate
-& 0.001 for KGE and NFM unless otherwise specified \\
-Batch size
-& KGE batch size 1024; NFM batch size up to 20000 \\
-Evaluation metrics
-& ROC-AUC and PR-AUC \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-The evaluation settings include warm start, cold start for drugs, and cold
-start for proteins. In the warm-start setting, drugs and proteins in the test
-set also appear in the training data. In the drug cold-start setting, test
-drugs do not appear in the positive training DTI pairs. In the protein
-cold-start setting, test proteins do not appear in the positive training DTI
-pairs. These settings are used to evaluate whether the proposed KG
-representation update supports generalization beyond observed DTI links.

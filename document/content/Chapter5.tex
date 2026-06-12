@@ -1,14 +1,62 @@
 \chapter{Implementation, Experiments, and Evaluation}
 \label{chap:experiments}
 
-\section{Implementation Overview}
+\section{Implementation}
 
 The main experiment runner is implemented in \texttt{src/kge\_nfm.py}. For each
 fold, the runner loads data, trains or prepares the KGE model, extracts pair
 features, trains the NFM classifier, evaluates predictions, and writes output
-artifacts.
+artifacts. The project is implemented as a Python-based machine learning
+pipeline using PyTorch for supervised learning and PyKEEN for knowledge graph
+embedding models.
 
-\section{Experiment Workflow}
+\subsection{Environment and Libraries}
+
+\begin{table}[H]
+\centering
+\caption{Implementation environment}
+\label{tab:development_environment}
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Item} & \textbf{Description} \\
+\midrule
+Language & Python 3.10 or newer \\
+Deep learning framework & PyTorch with the CUDA 12.1 (\texttt{cu121}) wheel build \\
+KGE framework & PyKEEN \\
+Data processing & NumPy, pandas, and scikit-learn \\
+Experiment output & CSV metrics, predictions, curves, and model checkpoints \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+PyTorch provides tensor operations, neural network training, and checkpoint
+management. PyKEEN is used to train the DistMult and CompGCN encoders. NumPy
+and pandas support numerical and tabular data processing, while scikit-learn
+provides preprocessing and evaluation utilities.
+
+\subsection{Source-Code Organization}
+
+\begin{table}[H]
+\centering
+\caption{Main implementation files}
+\label{tab:source_files}
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Path} & \textbf{Purpose} \\
+\midrule
+\texttt{src/kge\_nfm.py} & Main KGE-NFM experiment runner \\
+\texttt{src/data\_utils.py} & Dataset, fold, knowledge graph, and descriptor loading \\
+\texttt{src/kge.py} & KGE training, scoring, and embedding extraction \\
+\texttt{src/nfm.py} & NFM architecture and training loop \\
+\texttt{src/metrics\_utils.py} & ROC-AUC and PR-AUC computation \\
+\texttt{src/utils.py} & Random seed, device, and output-directory utilities \\
+\texttt{baseline/} & Baseline implementations and exploratory experiments \\
+\texttt{output/} & Predictions, metrics, curves, and saved models \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Experiment Workflow}
 
 The experiment workflow is:
 
@@ -24,6 +72,26 @@ The experiment workflow is:
     \item compute ROC-AUC and PR-AUC;
     \item save predictions, metric curves, and model checkpoints.
 \end{enumerate}
+
+\subsection{Execution Command}
+
+The following command runs the KGE-NFM pipeline with the CompGCN encoder on
+the Yamanishi08 warm-start 1:10 setting. Replacing \texttt{compgcn} with
+\texttt{distmult} selects the alternative encoder under the same downstream
+configuration.
+
+\begin{lstlisting}[caption={Example KGE-NFM experiment command}]
+python src/kge_nfm.py \
+  --dataset yamanishi_08 \
+  --split warm_start_1_10 \
+  --folds 10 \
+  --kge-model compgcn \
+  --device auto \
+  --embedding-dim 400 \
+  --kge-epochs 50 \
+  --nfm-epochs 2000 \
+  --output-dir output/kge_nfm_torch
+\end{lstlisting}
 
 \section{Evaluation Metrics}
 
@@ -53,14 +121,12 @@ Descriptor-only classifier & Uses drug and protein descriptors without KGE featu
 Standalone KGE score & Uses only KGE interaction scores for prediction \\
 KGE + Random Forest & Uses KGE features with a random forest classifier \\
 KGE + XGBoost & Uses KGE features with an XGBoost classifier \\
-KGE + NFM & Proposed model combining embeddings, descriptors, and NFM \\
+KGE-NFM & Framework combining KG embeddings, descriptors, and NFM \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \section{Experimental Setup}
-
-% TODO: Replace placeholder values with final experiment settings.
 
 \begin{table}[H]
 \centering
@@ -70,11 +136,12 @@ KGE + NFM & Proposed model combining embeddings, descriptors, and NFM \\
 \toprule
 \textbf{Item} & \textbf{Setting} \\
 \midrule
-Dataset & Yamanishi08 / BioKG / Hetionet \\
-Split & warm\_start\_1\_10 / cold-start split \\
-Number of folds & 10 \\
-Random seed & 42 \\
-Device & CPU / CUDA GPU \\
+Dataset & Yamanishi08 \\
+Splits & \texttt{warm\_start\_1\_1} and \texttt{warm\_start\_1\_10} \\
+Number of supplied splits & 10 per setting \\
+KGE encoders & DistMult and CompGCN \\
+Random seed & 0 \\
+Device & Automatically selected CPU or CUDA device \\
 Output directory & \texttt{output/kge\_nfm\_torch} \\
 \bottomrule
 \end{tabularx}
@@ -97,7 +164,7 @@ Descriptor-only classifier & -- & -- & -- & -- \\
 Standalone KGE & -- & -- & -- & -- \\
 KGE + Random Forest & -- & -- & -- & -- \\
 KGE + XGBoost & -- & -- & -- & -- \\
-KGE + NFM & -- & -- & -- & -- \\
+KGE-NFM & -- & -- & -- & -- \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -118,7 +185,7 @@ model component.
 Descriptors only & -- & -- \\
 KGE embeddings only & -- & -- \\
 Descriptors + KGE embeddings & -- & -- \\
-Full KGE + NFM pipeline & -- & -- \\
+Full KGE-NFM pipeline & -- & -- \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -148,4 +215,3 @@ The current project has several expected limitations:
     \item hyperparameter search may be limited by available computation;
     \item model predictions require biological validation before practical use.
 \end{itemize}
-

@@ -1,107 +1,171 @@
-\chapter{Technologies and Tools}
-\label{chap:technologies}
+\chapter{Data Analysis}
+\label{chap:data}
 
-\section{Overview}
+\section{Dataset Overview}
 
-The project is implemented as a Python-based machine learning pipeline. The
-current version uses PyTorch for supervised model training and PyKEEN for
-knowledge graph embedding models.
+This project uses the \textit{Yamanishi08} benchmark for drug--target
+interaction (DTI) prediction. The dataset represents known interactions as a
+bipartite graph whose two node sets are drugs and target proteins. Each
+observed edge denotes a known positive interaction, while the remaining
+drug--target pairs are unobserved. These unobserved pairs are used to sample
+negative training and test examples; they should not be interpreted as
+experimentally confirmed biological negatives.
 
-\section{Programming Language and Environment}
-
-\begin{table}[H]
-\centering
-\caption{Development environment}
-\label{tab:development_environment}
-\begin{tabularx}{\textwidth}{lX}
-\toprule
-\textbf{Item} & \textbf{Description} \\
-\midrule
-Language & Python 3.10 or newer \\
-Operating system & Windows or Linux development environment \\
-Deep learning framework & PyTorch with the CUDA 12.1 (\texttt{cu121}) wheel build \\
-KGE framework & PyKEEN \\
-Experiment output & CSV metrics, prediction files, saved model checkpoints \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\section{PyTorch and CUDA Configuration}
-
-The current implementation uses PyTorch as the deep learning framework for
-the NFM classifier and tensor-based model training. GPU-enabled environments
-install the official PyTorch wheel build compiled for NVIDIA CUDA 12.1,
-identified by the \texttt{cu121} build tag. In a Jupyter or Colab notebook,
-the installation command is:
-
-\begin{lstlisting}[caption={Installing the PyTorch CUDA 12.1 wheel build}]
-!pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-\end{lstlisting}
-
-For a standard terminal, the leading exclamation mark is omitted. The
-equivalent command is:
-
-\begin{lstlisting}[caption={Terminal installation command for PyTorch CUDA 12.1}]
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-\end{lstlisting}
-
-The \texttt{cu121} index specifies the CUDA 12.1 wheel distribution. Because
-the command does not pin numeric package releases, the exact versions of
-\texttt{torch}, \texttt{torchvision}, and \texttt{torchaudio} are resolved
-from the mutually compatible packages available on that index at installation
-time.
-
-\section{Main Libraries}
-
-\begin{itemize}
-    \item \textbf{PyTorch:} neural network implementation, tensor operations,
-    model training, and checkpoint saving.
-
-    \item \textbf{PyKEEN:} training and inference for knowledge graph embedding
-    models such as DistMult and CompGCN.
-
-    \item \textbf{NumPy:} numerical operations and array processing.
-
-    \item \textbf{pandas:} tabular data loading, merging, and output writing.
-
-    \item \textbf{scikit-learn:} preprocessing utilities and evaluation support.
-
-    \item \textbf{tqdm:} progress visualization during experiment runs.
-\end{itemize}
-
-\section{Project Structure}
+The dataset also provides 1024-dimensional Morgan fingerprints for drugs,
+147-dimensional CTD descriptors for proteins, and a biomedical knowledge graph
+used to construct entity embeddings. Since the main objective of this chapter
+is to characterize the DTI prediction problem, the analysis focuses on the
+interaction network and the two warm-start evaluation settings rather than on
+the individual descriptor distributions.
 
 \begin{table}[H]
 \centering
-\caption{Important source files}
-\label{tab:source_files}
-\begin{tabularx}{\textwidth}{lX}
+\caption{Overall statistics of the Yamanishi08 DTI network}
+\label{tab:yamanishi_dti_stats}
+\begin{tabular}{lr}
 \toprule
-\textbf{Path} & \textbf{Purpose} \\
+\textbf{Statistic} & \textbf{Value} \\
 \midrule
-\texttt{src/kge\_nfm.py} & Main PyTorch experiment runner \\
-\texttt{src/data\_utils.py} & Dataset loading, fold loading, KG loading, and descriptor loading \\
-\texttt{src/kge.py} & KGE training, scoring, and embedding extraction utilities \\
-\texttt{src/nfm.py} & NFM model definition and training loop \\
-\texttt{src/metrics\_utils.py} & ROC-AUC and PR-AUC helper functions \\
-\texttt{src/utils.py} & Seed setting, device selection, and output directory helpers \\
-\texttt{baseline/} & Baseline models and exploratory experiments \\
-\texttt{output/} & Experiment results, model files, predictions, and metric curves \\
+Known positive interactions & 5,127 \\
+Unique drugs & 791 \\
+Unique target proteins & 989 \\
+Possible drug--target pairs & 782,299 \\
+Unobserved drug--target pairs & 777,172 \\
+Observed positive density & 0.6554\% \\
+Unobserved-pair sparsity & 99.3446\% \\
+Average targets per drug & 6.48 \\
+Average drugs per target & 5.18 \\
 \bottomrule
-\end{tabularx}
+\end{tabular}
 \end{table}
 
+The auxiliary knowledge graph contains 95,672 raw rows, corresponding to
+95,579 unique triples after removing 93 duplicates. It contains 25,487 entities
+and 48 relation types, and covers all 791 drugs and 989 targets in the DTI
+network. Thus, graph context is available for every entity evaluated in this
+project.
 
-\section{Example Command}
+\section{Interaction Scarcity}
 
-\begin{lstlisting}[caption={Example KGE-NFM experiment command}]
-python src/kge_nfm.py \
-  --dataset yamanishi_08 \
-  --split warm_start_1_10 \
-  --folds 10 \
-  --device auto \
-  --embedding-dim 400 \
-  --kge-epochs 50 \
-  --nfm-epochs 2000 \
-  --output-dir output/kge_nfm_torch
-\end{lstlisting}
+Table~\ref{tab:yamanishi_dti_stats} shows that the DTI prediction space is
+extremely sparse. Only 5,127 of the 782,299 possible drug--target pairs are
+observed as positive, giving a density of 0.6554\%. Equivalently, 99.3446\% of
+the interaction matrix is unobserved. Consequently, the learning problem is
+defined by a small set of positive observations within a much larger candidate
+space.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/data_analysis/network_sparsity_summary.png}
+    \caption{Sparsity, low-degree prevalence, and hub concentration in the
+    Yamanishi08 DTI network.}
+    \label{fig:yamanishi_sparsity_summary}
+\end{figure}
+
+Figure~\ref{fig:yamanishi_sparsity_summary} summarizes three aspects of this
+scarcity. In addition to the low matrix density, most entities have little
+interaction evidence, while a relatively small group of hubs accounts for a
+large fraction of all observed edges. The dataset is therefore sparse both at
+the pair level and at the entity level.
+
+\section{Degree Distribution and Imbalance}
+
+The median degree is only two for both drugs and targets, although the maximum
+degrees reach 132 and 61, respectively. This gap indicates a strongly skewed
+degree distribution. In particular, 74.34\% of drugs have no more than five
+known targets, and 55.01\% of targets interact with no more than two drugs.
+
+\begin{table}[H]
+\centering
+\caption{Degree scarcity and concentration in the DTI network}
+\label{tab:yamanishi_degree_stats}
+\begin{tabular}{lrr}
+\toprule
+\textbf{Statistic} & \textbf{Drugs} & \textbf{Targets} \\
+\midrule
+Median degree & 2 & 2 \\
+Mean degree & 6.48 & 5.18 \\
+Maximum degree & 132 & 61 \\
+Low-degree entities & 588 ($\leq 5$) & 544 ($\leq 2$) \\
+Low-degree entity share & 74.34\% & 55.01\% \\
+Degree Gini coefficient & 0.669 & 0.568 \\
+Interactions held by top 10\% & 57.03\% & 41.49\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/data_analysis/dti_degree_distribution.png}
+    \caption{Drug and target degree distributions on a logarithmic count scale.}
+    \label{fig:yamanishi_degree_distribution}
+\end{figure}
+
+Figure~\ref{fig:yamanishi_degree_distribution} confirms that low-degree
+entities dominate both sides of the bipartite graph. The Gini coefficients in
+Table~\ref{tab:yamanishi_degree_stats} further quantify this imbalance. The
+top 10\% of drugs account for 57.03\% of all observed interactions, whereas the
+top 10\% of targets account for 41.49\%. Evaluation results may therefore be
+influenced disproportionately by well-connected entities, while predictions
+for low-degree entities remain supported by much less direct evidence.
+
+\section{Warm-Start Evaluation Settings}
+
+The experiments use two warm-start settings: 1:1 and 1:10. In both settings,
+the same positive interactions are retained, and every test drug and target
+also appears in the corresponding training data. The settings differ in the
+number of unobserved pairs sampled as negatives. The 1:1 setting is nearly
+balanced, whereas the 1:10 setting introduces approximately ten sampled
+negatives for each positive test pair.
+
+\begin{table}[H]
+\centering
+\caption{Mean composition of the warm-start splits}
+\label{tab:warm_start_comparison}
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+\textbf{Setting} & \textbf{Train pos.} & \textbf{Train neg.} &
+\textbf{Test pos.} & \textbf{Test neg.} & \textbf{Neg.:pos.} \\
+\midrule
+Warm-start 1:1 & 4,615.0 & 4,549.1 & 512.0 & 510.9 & 0.998:1 \\
+Warm-start 1:10 & 4,615.0 & 40,249.2 & 512.0 & 5,026.9 & 9.818:1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/data_analysis/warm_start_class_balance.png}
+    \caption{Mean positive and sampled-negative composition of the 1:1 and
+    1:10 warm-start settings.}
+    \label{fig:warm_start_class_balance}
+\end{figure}
+
+As shown in Table~\ref{tab:warm_start_comparison} and
+Figure~\ref{fig:warm_start_class_balance}, changing from 1:1 to 1:10 does not
+increase the amount of positive supervision. It only increases the number of
+sampled negative pairs, producing a more realistic but more imbalanced ranking
+problem. The 1:1 setting measures performance under balanced class exposure,
+whereas the 1:10 setting places greater emphasis on rejecting non-interacting
+candidates and is therefore expected to be more difficult, particularly for
+precision-oriented metrics.
+
+The data audit found no duplicate rows, no train--test pair overlap, and no
+sampled-negative pair that appears in the known-positive file. The ten supplied
+splits should be treated as repeated warm-start holdouts rather than as a
+disjoint partition: together, their test sets contain 3,120 unique positive
+pairs, and some positive pairs occur in more than one test split. Experimental
+results are consequently reported as the mean and standard deviation across
+the supplied splits.
+
+\section{Implications for the Prediction Task}
+
+The analysis establishes two central difficulties. First, positive DTI evidence
+is scarce: fewer than one percent of all candidate pairs are observed, and most
+drugs and targets have only a few known interactions. Second, the 1:10 setting
+substantially increases class imbalance without adding positive evidence. A
+successful model must therefore exploit information beyond direct interaction
+frequency and remain effective when positives are rare among candidate pairs.
+These properties motivate the use of knowledge graph embeddings together with
+the NFM prediction component introduced in Chapter~\ref{chap:methodology}.

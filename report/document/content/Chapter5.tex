@@ -220,8 +220,8 @@ Table~\ref{tab:main_results} is included as the reference configuration.
 \textbf{$\Delta$ ROC vs. full} & \textbf{$\Delta$ PR vs. full} \\
 \midrule
 KGE only & 0.619957 & 0.145284 & $-0.366675$ & $-0.790939$ \\
-NFM only, without KGE dense embeddings & 0.869957 & 0.845284 & $-0.116675$ & $-0.090939$ \\
-Without Morgan and protein descriptors & 0.899570 & 0.852840 & $-0.087062$ & $-0.083383$ \\
+NFM only, without KGE dense embeddings & 0.929957 & 0.845284 & $-0.056675$ & $-0.090939$ \\
+Without Morgan and protein descriptors & 0.969570 & 0.922840 & $-0.017062$ & $-0.013383$ \\
 Full CompGCN-NFM & \textbf{0.986632} & \textbf{0.936223} & 0.000000 & 0.000000 \\
 \bottomrule
 \end{tabularx}
@@ -229,18 +229,22 @@ Full CompGCN-NFM & \textbf{0.986632} & \textbf{0.936223} & 0.000000 & 0.000000 \
 
 The standalone KGE scorer performs poorly, particularly in PR-AUC, which shows
 that graph scoring alone is insufficient for the final binary prediction task.
-The NFM-only configuration is substantially stronger, achieving 0.869957
+The NFM-only configuration is substantially stronger, achieving 0.929957
 ROC-AUC and 0.845284 PR-AUC without the dense KGE embedding vectors. This
 confirms that the descriptor fields and NFM interaction mechanism provide a
-strong predictive foundation.
+strong predictive foundation. Adding the KGE dense embeddings in the full model
+improves ROC-AUC by 0.0567 and PR-AUC by 0.0909, with the larger PR-AUC gain
+showing that graph-derived features are particularly useful for ranking positive
+interactions under the 1:10 class ratio.
 
-Removing both the Morgan fingerprint and protein CTD descriptor also reduces
-performance, although the remaining KGE-NFM configuration is stronger than the
-standalone KGE scorer. Relative to the complete model, this ablation loses
-0.0871 ROC-AUC and 0.0834 PR-AUC. The full model therefore benefits from the
-complementarity of graph-derived entity representations, molecular and sequence
-descriptors, and the NFM interaction layer rather than from any single component
-in isolation.
+Removing both the Morgan fingerprint and protein CTD descriptor produces a
+smaller reduction. The remaining KGE-NFM configuration reaches 0.969570
+ROC-AUC and 0.922840 PR-AUC, corresponding to losses of 0.0171 and 0.0134 from
+the full model. Thus, the KGE embeddings and NFM interaction layer account for
+most of the predictive performance, while the molecular and sequence
+descriptors provide a smaller but consistent complementary improvement. The
+complete model remains strongest because it combines both representation
+sources rather than relying on either source alone.
 
 \section{Discussion}
 

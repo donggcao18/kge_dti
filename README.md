@@ -107,8 +107,8 @@ python src/kge_nfm.py \
 
 ## NFM Descriptor Ablation
 
-After a normal run has saved the fold-specific KGE checkpoints, descriptor
-ablation can reuse the frozen KGE embeddings without repeating KGE training:
+Descriptor ablation can reuse frozen KGE checkpoints through the CLI without
+repeating KGE training:
 
 ```bash
 python src/kge_nfm.py \
@@ -156,12 +156,30 @@ The configurable launcher for this experiment is:
 bash scripts/yamanishi_compgcn_descriptor_ablation.sh
 ```
 
+The launcher trains CompGCN once per fold before training the selected NFM
+descriptor variants. Its KGE settings can be overridden with environment
+variables. For example:
+
+```bash
+EMBEDDING_DIM=300 \
+KGE_EPOCHS=100 \
+KGE_BATCH_SIZE=4096 \
+KGE_LR=0.0005 \
+KGE_NUM_NEGS=10 \
+COMPGCN_LAYERS=2 \
+COMPGCN_DROPOUT=0.2 \
+COMPGCN_COMPOSITION=mult \
+ABLATION_VARIANT=all \
+bash scripts/yamanishi_compgcn_descriptor_ablation.sh
+```
+
 For one descriptor comparison, set `ABLATION_VARIANT` to `without-protein`,
 `without-morgan`, or `without-descriptors`. For example:
 
 ```bash
 ABLATION_VARIANT=without-morgan \
-KGE_CHECKPOINT_DIR=./output/kge_nfm_compgcn_warm_start_1_10/model \
+KGE_EPOCHS=50 \
+COMPGCN_LAYERS=3 \
 bash scripts/yamanishi_compgcn_descriptor_ablation.sh
 ```
 

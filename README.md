@@ -107,8 +107,8 @@ python src/kge_nfm.py \
 
 ## NFM Descriptor Ablation
 
-After a normal run has saved the fold-specific KGE checkpoints, the NFM can be
-retrained without repeating KGE training:
+After a normal run has saved the fold-specific KGE checkpoints, descriptor
+ablation can reuse the frozen KGE embeddings without repeating KGE training:
 
 ```bash
 python src/kge_nfm.py \
@@ -116,7 +116,7 @@ python src/kge_nfm.py \
   --split warm_start_1_10 \
   --folds 10 \
   --device auto \
-  --nfm-only \
+  --reuse-kge-checkpoints \
   --kge-checkpoint-dir output/kge_nfm_compgcn_warm_start/model \
   --descriptor-ablation all \
   --output-dir output/nfm_ablation_compgcn_warm_start \
@@ -163,6 +163,35 @@ For one descriptor comparison, set `ABLATION_VARIANT` to `without-protein`,
 ABLATION_VARIANT=without-morgan \
 KGE_CHECKPOINT_DIR=./output/kge_nfm_compgcn_warm_start_1_10/model \
 bash scripts/yamanishi_compgcn_descriptor_ablation.sh
+```
+
+## NFM-Only Ablation
+
+`--nfm-only` is the architectural ablation that removes the dense drug and
+protein KGE embedding vectors. It does not train or load a KGE model. NFM is
+trained from its sparse drug/protein ID interaction and the descriptor blocks:
+
+```bash
+python src/kge_nfm.py \
+  --dataset yamanishi_08 \
+  --split warm_start_1_10 \
+  --folds 10 \
+  --device auto \
+  --nfm-only \
+  --output-dir output/nfm_only_warm_start_1_10 \
+  --nfm-epochs 200 \
+  --batch-size 20000 \
+  --nfm-sparse-embedding-dim 50 \
+  --nfm-lr 0.001 \
+  --nfm-weight-decay 0.00001 \
+  --nfm-hidden-units 128,128 \
+  --nfm-patience 10
+```
+
+The equivalent launcher is:
+
+```bash
+bash scripts/yamanishi_nfm_only.sh
 ```
 
 ## Outputs

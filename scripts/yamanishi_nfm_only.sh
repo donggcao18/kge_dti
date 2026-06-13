@@ -8,9 +8,7 @@ export HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-./.cache}"
 split="${SPLIT:-warm_start_1_10}"
 dataset="${DATASET:-yamanishi_08}"
 data_root="${DATA_ROOT:-/kaggle/input/datasets/ngcaovn/kge-dti/data}"
-variant="${ABLATION_VARIANT:-all}"
-kge_checkpoint_dir="${KGE_CHECKPOINT_DIR:-./output/kge_nfm_compgcn_${split}/model}"
-output_dir="${OUTPUT_DIR:-./output/descriptor_ablation_compgcn_${split}}"
+output_dir="${OUTPUT_DIR:-./output/nfm_only_${split}}"
 
 python src/kge_nfm.py \
   --dataset "$dataset" \
@@ -18,12 +16,9 @@ python src/kge_nfm.py \
   --split "$split" \
   --folds "${FOLDS:-10}" \
   --device "${DEVICE:-auto}" \
-  --reuse-kge-checkpoints \
-  --kge-checkpoint-dir "$kge_checkpoint_dir" \
-  --descriptor-ablation "$variant" \
+  --nfm-only \
   --output-dir "$output_dir" \
   --protein-pca-components "${PROTEIN_PCA_COMPONENTS:-100}" \
-  --kge-batch-size "${KGE_BATCH_SIZE:-8192}" \
   --nfm-epochs "${NFM_EPOCHS:-200}" \
   --batch-size "${NFM_BATCH_SIZE:-20000}" \
   --nfm-sparse-embedding-dim "${NFM_SPARSE_EMBEDDING_DIM:-50}" \

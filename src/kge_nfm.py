@@ -56,11 +56,15 @@ def combine_feature_blocks(
     variant: str,
 ) -> np.ndarray:
     use_morgan, use_protein = ABLATION_VARIANTS[variant]
-    blocks = [kge_features]
+    blocks = []
+    if kge_features.shape[1] > 0:
+        blocks.append(kge_features)
     if use_morgan:
         blocks.append(drug_features)
     if use_protein:
         blocks.append(protein_features)
+    if not blocks:
+        return np.empty((kge_features.shape[0], 0), dtype=np.float32)
     return np.concatenate(blocks, axis=1)
 
 
@@ -88,11 +92,17 @@ def run_fold(
     fold_number = fold + 1
     print(f"Fold {fold_number} ({args.split}, {args.kge_model})")
     train, test = load_fold(spec, fold)
-    train_pos = train.loc[train["label"] == 1, TRIPLE_COLUMNS]
-    kge_train = pd.concat([train_pos, kg], ignore_index=True)[TRIPLE_COLUMNS].astype(str)
-
     output_root = Path(args.output_dir)
+    kge_model = None
+    triples_factory = None
+    losses = []
     if args.nfm_only:
+        print("NFM-only mode: KGE training and KGE embedding features are disabled.")
+    else:
+        train_pos = train.loc[train["label"] == 1, TRIPLE_COLUMNS]
+        kge_train = pd.concat([train_pos, kg], ignore_index=True)[TRIPLE_COLUMNS].astype(str)
+
+    if args.reuse_kge_checkpoints:
         checkpoint_dir = Path(args.kge_checkpoint_dir) if args.kge_checkpoint_dir else output_root / "model"
         checkpoint_path = checkpoint_dir / f"kge_nfm_fold_{fold}.pt"
         if not checkpoint_path.exists():
@@ -114,7 +124,7 @@ def run_fold(
                     f"Checkpoint {key} is '{saved_value}', but this run requested '{current_value}'."
                 )
         print(f"Loaded KGE model: {checkpoint_args.get('kge_model', 'distmult')}")
-    else:
+    elif not args.nfm_only:
         kge_kwargs = dict(
             train_triples=kge_train,
             device=device,
@@ -136,10 +146,11 @@ def run_fold(
         else:
             kge_model, triples_factory, losses = train_distmult(**kge_kwargs)
 
-    require_entities(triples_factory, train["head"].tolist() + train["tail"].tolist(), "Training fold")
-    require_entities(triples_factory, test["head"].tolist() + test["tail"].tolist(), "Test fold")
+    if triples_factory is not None:
+        require_entities(triples_factory, train["head"].tolist() + train["tail"].tolist(), "Training fold")
+        require_entities(triples_factory, test["head"].tolist() + test["tail"].tolist(), "Test fold")
 
-    if not args.nfm_only:
+    if not args.nfm_only and not args.reuse_kge_checkpoints:
         torch.save(
             {
                 "model_state_dict": kge_model.state_dict(),
@@ -152,22 +163,28 @@ def run_fold(
         )
 
     test_labels = test["label"].to_numpy(dtype=np.float32)
-    kge_scores = score_triples(kge_model, triples_factory, test[TRIPLE_COLUMNS], device, args.kge_batch_size)
-    roc_curve, roc_value = roc_auc(test_labels, kge_scores)
-    pr_curve, pr_value = pr_auc(test_labels, kge_scores)
-
     train_pairs = train[TRIPLE_COLUMNS]
     test_pairs = test[TRIPLE_COLUMNS]
-    train_kge_features = pair_embeddings(kge_model, triples_factory, train_pairs, device)
-    test_kge_features = pair_embeddings(kge_model, triples_factory, test_pairs, device)
+    if args.nfm_only:
+        train_kge_features = np.empty((len(train_pairs), 0), dtype=np.float32)
+        test_kge_features = np.empty((len(test_pairs), 0), dtype=np.float32)
+        kge_scores = None
+        roc_value = np.nan
+        pr_value = np.nan
+    else:
+        kge_scores = score_triples(kge_model, triples_factory, test_pairs, device, args.kge_batch_size)
+        roc_curve, roc_value = roc_auc(test_labels, kge_scores)
+        pr_curve, pr_value = pr_auc(test_labels, kge_scores)
+        train_kge_features = pair_embeddings(kge_model, triples_factory, train_pairs, device)
+        test_kge_features = pair_embeddings(kge_model, triples_factory, test_pairs, device)
+        roc_curve.to_csv(output_root / "curve" / "roc" / f"{fold}.csv", index=False)
+        pr_curve.to_csv(output_root / "curve" / "pr" / f"{fold}.csv", index=False)
     train_drug_features, train_protein_features = merge_feature_blocks(train_pairs, drug_df, protein_df, spec)
     test_drug_features, test_protein_features = merge_feature_blocks(test_pairs, drug_df, protein_df, spec)
 
-    roc_curve.to_csv(output_root / "curve" / "roc" / f"{fold}.csv", index=False)
-    pr_curve.to_csv(output_root / "curve" / "pr" / f"{fold}.csv", index=False)
-
-    print(f"roc_auc: {roc_value:.6f}")
-    print(f"pr_auc: {pr_value:.6f}")
+    if not args.nfm_only:
+        print(f"roc_auc: {roc_value:.6f}")
+        print(f"pr_auc: {pr_value:.6f}")
     nfm_metrics = []
     for variant in resolve_ablation_variants(args):
         print(f"Training NFM variant: {variant}")
@@ -183,9 +200,10 @@ def run_fold(
             test_protein_features,
             variant,
         )
-        scaler = MinMaxScaler(feature_range=(0, 1))
-        train_features = scaler.fit_transform(train_features).astype(np.float32)
-        test_features = scaler.transform(test_features).astype(np.float32)
+        if train_features.shape[1] > 0:
+            scaler = MinMaxScaler(feature_range=(0, 1))
+            train_features = scaler.fit_transform(train_features).astype(np.float32)
+            test_features = scaler.transform(test_features).astype(np.float32)
 
         roc_nfm, roc_nfm_value, pr_nfm, pr_nfm_value, nfm_pred = train_nfm(
             train_pairs=train_pairs,
@@ -217,7 +235,8 @@ def run_fold(
         pr_nfm.to_csv(variant_pr_dir / f"{fold}.csv", index=False)
 
         predictions = test[TRIPLE_COLUMNS + ["label"]].copy()
-        predictions["kge_score"] = kge_scores
+        if kge_scores is not None:
+            predictions["kge_score"] = kge_scores
         predictions["nfm_pred"] = nfm_pred
         predictions.to_csv(variant_pred_dir / f"fold_{fold}.csv", index=False)
 
@@ -298,12 +317,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--nfm-only",
         action="store_true",
-        help="Skip KGE training and load one saved KGE checkpoint per fold.",
+        help="Train NFM without KGE dense embedding features; use descriptor features only.",
+    )
+    parser.add_argument(
+        "--reuse-kge-checkpoints",
+        action="store_true",
+        help="Load saved KGE checkpoints instead of retraining KGE.",
     )
     parser.add_argument(
         "--kge-checkpoint-dir",
         default=None,
-        help="Directory containing kge_nfm_fold_<index>.pt files for --nfm-only.",
+        help="Directory containing kge_nfm_fold_<index>.pt files for --reuse-kge-checkpoints.",
     )
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--drug-features-only", action="store_true")
@@ -313,6 +337,8 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    if args.nfm_only and args.reuse_kge_checkpoints:
+        raise ValueError("--nfm-only cannot be combined with --reuse-kge-checkpoints.")
     repo_root = Path(__file__).resolve().parent.parent
     data_root = Path(args.data_root) if args.data_root is not None else repo_root / "data"
     set_seed(args.seed)

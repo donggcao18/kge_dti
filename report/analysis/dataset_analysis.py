@@ -9,7 +9,11 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from PIL import Image, ImageDraw, ImageFont
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter, MaxNLocator
 
 
 DTI_COLUMNS = ["head", "relation", "tail"]
@@ -34,13 +38,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--data-dir",
         type=Path,
-        default=Path("data/yamanishi_08"),
+        default=Path("/kaggle/input/datasets/ngcaovn/kge-dti/data/yamanishi_08"),
         help="Path to the Yamanishi08 directory.",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("report/analysis/results/yamanishi_08"),
+        default=Path("/kaggle/working/yamanishi_08_analysis"),
         help="Directory for generated tables, figures, and the Markdown report.",
     )
     parser.add_argument("--dpi", type=int, default=240, help="PNG resolution.")
@@ -78,154 +82,35 @@ def save_json(data: dict, path: Path) -> None:
     path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
-def load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    candidates = [
-        Path("C:/Windows/Fonts/arialbd.ttf" if bold else "C:/Windows/Fonts/arial.ttf"),
-        Path("C:/Windows/Fonts/calibrib.ttf" if bold else "C:/Windows/Fonts/calibri.ttf"),
-    ]
-    for path in candidates:
-        if path.exists():
-            return ImageFont.truetype(str(path), size=size)
-    return ImageFont.load_default()
-
-
-def text_size(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont) -> tuple[int, int]:
-    box = draw.textbbox((0, 0), text, font=font)
-    return box[2] - box[0], box[3] - box[1]
-
-
-def draw_centered(
-    draw: ImageDraw.ImageDraw,
-    center_x: float,
-    y: float,
-    text: str,
-    font: ImageFont.ImageFont,
-    fill: str = "#0F172A",
-) -> None:
-    width, _ = text_size(draw, text, font)
-    draw.text((center_x - width / 2, y), text, font=font, fill=fill)
-
-
-def make_canvas(width: int, height: int, title: str) -> tuple[Image.Image, ImageDraw.ImageDraw]:
-    image = Image.new("RGB", (width, height), "white")
-    draw = ImageDraw.Draw(image)
-    draw_centered(draw, width / 2, 24, title, load_font(30, bold=True))
-    return image, draw
-
-
-def save_image(image: Image.Image, path: Path, dpi: int) -> None:
-    image.save(path, format="PNG", dpi=(dpi, dpi), optimize=True)
-
-
-def draw_panel_axes(
-    draw: ImageDraw.ImageDraw,
-    box: tuple[int, int, int, int],
-    title: str,
-    xlabel: str,
-    ylabel: str,
-) -> tuple[int, int, int, int]:
-    left, top, right, bottom = box
-    plot = (left + 78, top + 54, right - 24, bottom - 62)
-    x0, y0, x1, y1 = plot
-    draw_centered(draw, (left + right) / 2, top + 5, title, load_font(21, bold=True))
-    draw.text((x0, top + 34), ylabel, font=load_font(14), fill="#475569")
-    draw.line((x0, y1, x1, y1), fill="#475569", width=2)
-    draw.line((x0, y0, x0, y1), fill="#475569", width=2)
-    draw_centered(draw, (x0 + x1) / 2, bottom - 34, xlabel, load_font(16), "#334155")
-    return plot
-
-
-def draw_y_grid(
-    draw: ImageDraw.ImageDraw,
-    plot: tuple[int, int, int, int],
-    maximum: float,
-    formatter=lambda value: f"{value:.0f}",
-) -> None:
-    x0, y0, x1, y1 = plot
-    font = load_font(13)
-    for fraction in np.linspace(0, 1, 5):
-        y = y1 - fraction * (y1 - y0)
-        draw.line((x0, y, x1, y), fill="#D7E0E8", width=1)
-        label = formatter(maximum * fraction)
-        label_width, label_height = text_size(draw, label, font)
-        draw.text((x0 - label_width - 8, y - label_height / 2), label, font=font, fill="#64748B")
-
-
-def draw_histogram_panel(
-    draw: ImageDraw.ImageDraw,
-    box: tuple[int, int, int, int],
-    values: np.ndarray,
-    title: str,
-    xlabel: str,
-    color: str,
-    log_y: bool = False,
-    bins: int = 30,
-) -> None:
-    plot = draw_panel_axes(
-        draw,
-        box,
-        title,
-        xlabel,
-        "Count (log)" if log_y else "Count",
+def apply_plot_style() -> None:
+    plt.rcParams.update(
+        {
+            "figure.facecolor": "white",
+            "axes.facecolor": "white",
+            "axes.edgecolor": "#94A3B8",
+            "axes.labelcolor": "#334155",
+            "axes.titlecolor": "#0F172A",
+            "axes.titlesize": 12,
+            "axes.titleweight": "bold",
+            "font.size": 10,
+            "grid.color": "#CBD5E1",
+            "grid.linestyle": "--",
+            "grid.alpha": 0.55,
+            "legend.frameon": False,
+            "xtick.color": "#475569",
+            "ytick.color": "#475569",
+        }
     )
-    x0, y0, x1, y1 = plot
-    counts, edges = np.histogram(values, bins=bins)
-    plotted = np.log10(counts + 1) if log_y else counts.astype(float)
-    maximum = max(float(plotted.max()), 1.0)
-    draw_y_grid(
-        draw,
-        plot,
-        maximum,
-        (lambda value: f"{int(round(10 ** value - 1))}") if log_y else (lambda value: f"{int(value)}"),
-    )
-    slot = (x1 - x0) / len(counts)
-    for index, value in enumerate(plotted):
-        bar_height = (y1 - y0) * float(value) / maximum
-        left = x0 + index * slot + 1
-        right = x0 + (index + 1) * slot - 1
-        draw.rectangle((left, y1 - bar_height, right, y1), fill=color)
-    tick_font = load_font(13)
-    draw.text((x0, y1 + 8), f"{edges[0]:.0f}", font=tick_font, fill="#64748B")
-    end_label = f"{edges[-1]:.0f}"
-    end_width, _ = text_size(draw, end_label, tick_font)
-    draw.text((x1 - end_width, y1 + 8), end_label, font=tick_font, fill="#64748B")
 
 
-def draw_bar_panel(
-    draw: ImageDraw.ImageDraw,
-    box: tuple[int, int, int, int],
-    labels: list[str],
-    values: list[float],
-    title: str,
-    ylabel: str,
-    colors: list[str],
-    maximum: float | None = None,
-    percent: bool = False,
-) -> None:
-    plot = draw_panel_axes(draw, box, title, "", ylabel)
-    x0, y0, x1, y1 = plot
-    maximum = maximum or max(values) * 1.12 or 1.0
-    draw_y_grid(
-        draw,
-        plot,
-        maximum,
-        (lambda value: f"{value:.0f}%") if percent else (lambda value: f"{value:.0f}"),
-    )
-    group_width = (x1 - x0) / len(values)
-    label_font = load_font(14)
-    value_font = load_font(14, bold=True)
-    for index, (label, value) in enumerate(zip(labels, values)):
-        width = group_width * 0.52
-        center = x0 + (index + 0.5) * group_width
-        height = (y1 - y0) * value / maximum
-        draw.rounded_rectangle(
-            (center - width / 2, y1 - height, center + width / 2, y1),
-            radius=4,
-            fill=colors[index % len(colors)],
-        )
-        draw_centered(draw, center, y1 + 11, label, label_font, "#334155")
-        value_label = f"{value:.1f}%" if percent else f"{value:,.0f}"
-        draw_centered(draw, center, y1 - height - 24, value_label, value_font, "#334155")
+def save_figure(figure: plt.Figure, path: Path, dpi: int) -> None:
+    figure.savefig(path, dpi=dpi, bbox_inches="tight", facecolor="white")
+    plt.close(figure)
+
+
+def add_bar_labels(axis: plt.Axes, bars, percent: bool = False) -> None:
+    labels = [f"{bar.get_height():.1f}%" if percent else f"{bar.get_height():,.0f}" for bar in bars]
+    axis.bar_label(bars, labels=labels, padding=3, fontsize=9, color="#334155")
 
 
 def gini(values: pd.Series | np.ndarray) -> float:
@@ -646,242 +531,165 @@ def analyze_warm_start_folds(
 def plot_degree_distributions(
     drug_degree: pd.Series, target_degree: pd.Series, figures_dir: Path, dpi: int
 ) -> None:
-    image, draw = make_canvas(1800, 760, "Yamanishi08 DTI Degree Distributions")
-    draw_histogram_panel(
-        draw,
-        (35, 90, 885, 725),
-        drug_degree.to_numpy(),
-        "Drug Degree Distribution",
-        "Known targets per drug",
-        COLORS["drug"],
-        log_y=True,
-    )
-    draw_histogram_panel(
-        draw,
-        (915, 90, 1765, 725),
-        target_degree.to_numpy(),
-        "Target Degree Distribution",
-        "Known drugs per target",
-        COLORS["target"],
-        log_y=True,
-    )
-    save_image(image, figures_dir / "dti_degree_distribution.png", dpi)
+    figure, axes = plt.subplots(1, 2, figsize=(12, 4.8))
+    figure.suptitle("Yamanishi08 DTI Degree Distributions", fontsize=15, fontweight="bold")
+    panels = [
+        (axes[0], drug_degree, "Drug Degree Distribution", "Known targets per drug", COLORS["drug"]),
+        (axes[1], target_degree, "Target Degree Distribution", "Known drugs per target", COLORS["target"]),
+    ]
+    for axis, values, title, xlabel, color in panels:
+        axis.hist(values.to_numpy(), bins=30, color=color, edgecolor="white", linewidth=0.6)
+        axis.set_yscale("log")
+        axis.set_title(title)
+        axis.set_xlabel(xlabel)
+        axis.set_ylabel("Entity count (log scale)")
+        axis.grid(axis="y")
+    figure.tight_layout(rect=(0, 0, 1, 0.93))
+    save_figure(figure, figures_dir / "dti_degree_distribution.png", dpi)
 
 
 def plot_degree_rank(
     drug_degree: pd.Series, target_degree: pd.Series, figures_dir: Path, dpi: int
 ) -> None:
-    image, draw = make_canvas(1200, 760, "Rank-Degree Profile of the DTI Graph")
-    plot = draw_panel_axes(
-        draw,
-        (70, 90, 1130, 720),
-        "Heavy-Tailed Connectivity",
-        "Entity rank (log scale)",
-        "Degree (log scale)",
-    )
-    x0, y0, x1, y1 = plot
-    max_rank = max(len(drug_degree), len(target_degree))
-    max_degree = max(drug_degree.max(), target_degree.max())
+    figure, axis = plt.subplots(figsize=(8.5, 5.2))
     for values, label, color in [
         (drug_degree, "Drugs", COLORS["drug"]),
         (target_degree, "Targets", COLORS["target"]),
     ]:
         ranked = np.sort(values.to_numpy())[::-1]
-        points = []
-        for rank, degree in enumerate(ranked, start=1):
-            x = x0 + np.log10(rank) / np.log10(max_rank) * (x1 - x0)
-            y = y1 - np.log10(degree) / np.log10(max_degree) * (y1 - y0)
-            points.append((float(x), float(y)))
-        draw.line(points, fill=color, width=4)
-    draw_y_grid(draw, plot, math.log10(max_degree), lambda value: f"{10 ** value:.0f}")
-    legend_x = x1 - 175
-    for offset, (label, color) in enumerate(
-        [("Drugs", COLORS["drug"]), ("Targets", COLORS["target"])]
-    ):
-        y = y0 + 12 + offset * 32
-        draw.line((legend_x, y + 8, legend_x + 34, y + 8), fill=color, width=5)
-        draw.text((legend_x + 44, y), label, font=load_font(16), fill="#334155")
-    save_image(image, figures_dir / "dti_degree_rank.png", dpi)
+        axis.plot(np.arange(1, len(ranked) + 1), ranked, linewidth=2.2, color=color, label=label)
+    axis.set_xscale("log")
+    axis.set_yscale("log")
+    axis.set_title("Rank-Degree Profile of the DTI Graph")
+    axis.set_xlabel("Entity rank (log scale)")
+    axis.set_ylabel("Degree (log scale)")
+    axis.grid(which="both")
+    axis.legend()
+    figure.tight_layout()
+    save_figure(figure, figures_dir / "dti_degree_rank.png", dpi)
 
 
 def plot_network_summary(overview: dict, degree_summary: pd.DataFrame, figures_dir: Path, dpi: int) -> None:
-    image, draw = make_canvas(2100, 740, "Yamanishi08 Network Sparsity and Imbalance")
-    draw_bar_panel(
-        draw,
-        (20, 85, 690, 705),
-        ["Observed", "Unobserved"],
-        [overview["observed_positive_density"] * 100, overview["unobserved_pair_sparsity"] * 100],
-        "Interaction Matrix",
-        "Pair share (%)",
-        [COLORS["positive"], "#C9D5E1"],
-        maximum=105,
-        percent=True,
-    )
-    draw_bar_panel(
-        draw,
-        (715, 85, 1385, 705),
-        ["Drug <= 5", "Target <= 2"],
-        [overview["drug_degree_le_5_share"] * 100, overview["target_degree_le_2_share"] * 100],
-        "Low-Degree Entities",
-        "Entity share (%)",
-        [COLORS["drug"], COLORS["target"]],
-        maximum=100,
-        percent=True,
-    )
-    draw_bar_panel(
-        draw,
-        (1410, 85, 2080, 705),
-        degree_summary["entity_type"].tolist(),
-        (degree_summary["top_10_percent_interaction_share"] * 100).tolist(),
-        "Hub Concentration",
-        "Top 10% interaction share",
-        [COLORS["drug"], COLORS["target"]],
-        maximum=100,
-        percent=True,
-    )
-    save_image(image, figures_dir / "network_sparsity_summary.png", dpi)
+    figure, axes = plt.subplots(1, 3, figsize=(14, 4.5))
+    figure.suptitle("Yamanishi08 Network Sparsity and Imbalance", fontsize=15, fontweight="bold")
+    panels = [
+        (
+            ["Observed", "Unobserved"],
+            [overview["observed_positive_density"] * 100, overview["unobserved_pair_sparsity"] * 100],
+            "Interaction Matrix",
+            "Pair share (%)",
+            [COLORS["positive"], "#C9D5E1"],
+        ),
+        (
+            ["Drug <= 5", "Target <= 2"],
+            [overview["drug_degree_le_5_share"] * 100, overview["target_degree_le_2_share"] * 100],
+            "Low-Degree Entities",
+            "Entity share (%)",
+            [COLORS["drug"], COLORS["target"]],
+        ),
+        (
+            degree_summary["entity_type"].tolist(),
+            (degree_summary["top_10_percent_interaction_share"] * 100).tolist(),
+            "Hub Concentration",
+            "Top 10% interaction share (%)",
+            [COLORS["drug"], COLORS["target"]],
+        ),
+    ]
+    for axis, (labels, values, title, ylabel, colors) in zip(axes, panels):
+        bars = axis.bar(labels, values, color=colors, width=0.6)
+        axis.set_title(title)
+        axis.set_ylabel(ylabel)
+        axis.set_ylim(0, 105)
+        axis.grid(axis="y")
+        add_bar_labels(axis, bars, percent=True)
+    figure.tight_layout(rect=(0, 0, 1, 0.92))
+    save_figure(figure, figures_dir / "network_sparsity_summary.png", dpi)
 
 
 def plot_kg_relations(relation_table: pd.DataFrame, figures_dir: Path, dpi: int) -> None:
     top = relation_table.head(15).sort_values("triple_count")
-    image, draw = make_canvas(1500, 900, "Most Frequent Relations in the Combined Knowledge Graph")
-    left, top_y, right, bottom = 370, 105, 1435, 840
-    maximum = float(top["triple_count"].max())
-    row_height = (bottom - top_y) / len(top)
-    label_font = load_font(17)
-    value_font = load_font(15, bold=True)
-    for index, row in enumerate(top.itertuples(index=False)):
-        y = top_y + index * row_height
-        bar_width = (right - left) * row.triple_count / maximum
-        label_width, label_height = text_size(draw, row.relation, label_font)
-        draw.text((left - label_width - 16, y + row_height * 0.25), row.relation, font=label_font, fill="#334155")
-        draw.rounded_rectangle(
-            (left, y + row_height * 0.18, left + bar_width, y + row_height * 0.82),
-            radius=5,
-            fill=COLORS["kg"],
-        )
-        draw.text(
-            (left + bar_width + 10, y + row_height * 0.25),
-            f"{row.triple_count:,}",
-            font=value_font,
-            fill="#334155",
-        )
-    save_image(image, figures_dir / "knowledge_graph_relation_distribution.png", dpi)
+    figure, axis = plt.subplots(figsize=(10, 6.5))
+    bars = axis.barh(top["relation"], top["triple_count"], color=COLORS["kg"])
+    axis.set_title("Most Frequent Relations in the Combined Knowledge Graph")
+    axis.set_xlabel("Triple count")
+    axis.grid(axis="x")
+    axis.xaxis.set_major_formatter(FuncFormatter(lambda value, _: f"{value:,.0f}"))
+    axis.bar_label(bars, labels=[f"{value:,}" for value in top["triple_count"]], padding=4, fontsize=8)
+    axis.margins(x=0.12)
+    figure.tight_layout()
+    save_figure(figure, figures_dir / "knowledge_graph_relation_distribution.png", dpi)
 
 
 def plot_feature_characteristics(
     feature_arrays: dict[str, np.ndarray], figures_dir: Path, dpi: int
 ) -> None:
-    image, draw = make_canvas(2100, 740, "Yamanishi08 Descriptor Inputs")
-    draw_histogram_panel(
-        draw,
-        (20, 85, 690, 705),
-        feature_arrays["active_bits"],
-        "Morgan Fingerprint Activity",
-        "Nonzero bits per drug",
-        COLORS["drug"],
-    )
-    draw_histogram_panel(
-        draw,
-        (715, 85, 1385, 705),
-        feature_arrays["smiles_lengths"],
-        "SMILES Length",
-        "Characters",
-        COLORS["positive"],
-    )
-    draw_histogram_panel(
-        draw,
-        (1410, 85, 2080, 705),
-        feature_arrays["sequence_lengths"],
-        "Protein Sequence Length",
-        "Residues",
-        COLORS["negative"],
-        bins=35,
-    )
-    save_image(image, figures_dir / "feature_characteristics.png", dpi)
+    figure, axes = plt.subplots(1, 3, figsize=(14, 4.5))
+    figure.suptitle("Yamanishi08 Descriptor Inputs", fontsize=15, fontweight="bold")
+    panels = [
+        ("active_bits", "Morgan Fingerprint Activity", "Nonzero bits per drug", COLORS["drug"], 30),
+        ("smiles_lengths", "SMILES Length", "Characters", COLORS["positive"], 30),
+        ("sequence_lengths", "Protein Sequence Length", "Residues", COLORS["negative"], 35),
+    ]
+    for axis, (key, title, xlabel, color, bins) in zip(axes, panels):
+        axis.hist(feature_arrays[key], bins=bins, color=color, edgecolor="white", linewidth=0.6)
+        axis.set_title(title)
+        axis.set_xlabel(xlabel)
+        axis.set_ylabel("Count")
+        axis.grid(axis="y")
+    figure.tight_layout(rect=(0, 0, 1, 0.92))
+    save_figure(figure, figures_dir / "feature_characteristics.png", dpi)
 
 
 def plot_warm_start_balance(fold_stats: pd.DataFrame, figures_dir: Path, dpi: int) -> None:
     summary = fold_stats.groupby("setting", sort=False)[
         ["train_positive", "train_negative", "test_positive", "test_negative"]
     ].mean()
-    image, draw = make_canvas(1800, 760, "Warm-Start Class Balance Across Ten Folds")
-    for panel_index, (prefix, title) in enumerate(
-        [("train", "Mean Training Composition"), ("test", "Mean Test Composition")]
+    figure, axes = plt.subplots(1, 2, figsize=(12, 4.8), sharey=True)
+    figure.suptitle("Warm-Start Class Balance Across Ten Folds", fontsize=15, fontweight="bold")
+    labels = [setting.replace("Warm-start ", "") for setting in summary.index]
+    positions = np.arange(len(summary))
+    for axis, (prefix, title) in zip(
+        axes,
+        [("train", "Mean Training Composition"), ("test", "Mean Test Composition")],
     ):
-        box = (35 + panel_index * 880, 90, 875 + panel_index * 880, 720)
-        plot = draw_panel_axes(draw, box, title, "", "Pairs per fold")
-        x0, y0, x1, y1 = plot
-        totals = summary[f"{prefix}_positive"] + summary[f"{prefix}_negative"]
-        maximum = float(totals.max()) * 1.12
-        draw_y_grid(draw, plot, maximum, lambda value: f"{value / 1000:.0f}k" if value >= 1000 else f"{value:.0f}")
-        group_width = (x1 - x0) / len(summary)
-        for index, (setting, row) in enumerate(summary.iterrows()):
-            center = x0 + (index + 0.5) * group_width
-            bar_width = group_width * 0.48
-            positive = float(row[f"{prefix}_positive"])
-            negative = float(row[f"{prefix}_negative"])
-            positive_height = (y1 - y0) * positive / maximum
-            negative_height = (y1 - y0) * negative / maximum
-            draw.rectangle(
-                (center - bar_width / 2, y1 - positive_height, center + bar_width / 2, y1),
-                fill=COLORS["positive"],
-            )
-            draw.rectangle(
-                (
-                    center - bar_width / 2,
-                    y1 - positive_height - negative_height,
-                    center + bar_width / 2,
-                    y1 - positive_height,
-                ),
-                fill=COLORS["negative"],
-            )
-            draw_centered(draw, center, y1 + 12, setting.replace("Warm-start ", ""), load_font(16))
-    draw.rectangle((1370, 63, 1394, 87), fill=COLORS["positive"])
-    draw.text((1405, 63), "Positive", font=load_font(15), fill="#334155")
-    draw.rectangle((1490, 63, 1514, 87), fill=COLORS["negative"])
-    draw.text((1525, 63), "Sampled negative", font=load_font(15), fill="#334155")
-    save_image(image, figures_dir / "warm_start_class_balance.png", dpi)
+        positives = summary[f"{prefix}_positive"].to_numpy(dtype=float)
+        negatives = summary[f"{prefix}_negative"].to_numpy(dtype=float)
+        axis.bar(positions, positives, color=COLORS["positive"], label="Positive")
+        axis.bar(positions, negatives, bottom=positives, color=COLORS["negative"], label="Sampled negative")
+        axis.set_title(title)
+        axis.set_xticks(positions, labels)
+        axis.set_ylabel("Pairs per fold")
+        axis.yaxis.set_major_formatter(FuncFormatter(lambda value, _: f"{value / 1000:.0f}k" if value >= 1000 else f"{value:.0f}"))
+        axis.grid(axis="y")
+    handles, legend_labels = axes[0].get_legend_handles_labels()
+    figure.legend(handles, legend_labels, loc="upper right", bbox_to_anchor=(0.98, 0.95))
+    figure.tight_layout(rect=(0, 0, 1, 0.91))
+    save_figure(figure, figures_dir / "warm_start_class_balance.png", dpi)
 
 
 def plot_fold_stability(fold_stats: pd.DataFrame, figures_dir: Path, dpi: int) -> None:
-    image, draw = make_canvas(1800, 760, "Fold Stability of the Warm-Start Protocol")
+    figure, axes = plt.subplots(1, 2, figsize=(12, 4.8))
+    figure.suptitle("Fold Stability of the Warm-Start Protocol", fontsize=15, fontweight="bold")
     panels = [
         ("test_samples", "Total Test Pairs per Fold", "Test pairs"),
         ("test_negative_positive_ratio", "Realized Test Negative-to-Positive Ratio", "Negative / positive"),
     ]
     line_colors = [COLORS["drug"], COLORS["target"]]
     grouped = list(fold_stats.groupby("setting", sort=False))
-    for panel_index, (metric, title, ylabel) in enumerate(panels):
-        box = (35 + panel_index * 880, 90, 875 + panel_index * 880, 720)
-        plot = draw_panel_axes(draw, box, title, "Fold", ylabel)
-        x0, y0, x1, y1 = plot
-        all_values = fold_stats[metric].to_numpy(dtype=float)
-        minimum = float(all_values.min())
-        maximum = float(all_values.max())
-        padding = max((maximum - minimum) * 0.25, 0.1)
-        lower, upper = 0.0, maximum + padding
-        draw_y_grid(draw, plot, upper - lower, lambda value: f"{lower + value:.2f}" if metric.endswith("ratio") else f"{lower + value:.0f}")
+    for axis, (metric, title, ylabel) in zip(axes, panels):
         for color, (setting, group) in zip(line_colors, grouped):
-            points = []
-            for row in group.itertuples(index=False):
-                x = x0 + (row.fold - 1) / 9 * (x1 - x0)
-                value = float(getattr(row, metric))
-                y = y1 - (value - lower) / (upper - lower) * (y1 - y0)
-                points.append((float(x), float(y)))
-            draw.line(points, fill=color, width=4)
-            for x, y in points:
-                draw.ellipse((x - 5, y - 5, x + 5, y + 5), fill=color)
-        for fold in range(1, 11):
-            x = x0 + (fold - 1) / 9 * (x1 - x0)
-            draw_centered(draw, x, y1 + 10, str(fold), load_font(13), "#64748B")
-    legend_x = 1325
-    for index, ((setting, _), color) in enumerate(zip(grouped, line_colors)):
-        x = legend_x + index * 220
-        y = 64
-        draw.line((x, y + 8, x + 34, y + 8), fill=color, width=5)
-        draw.text((x + 44, y), setting, font=load_font(15), fill="#334155")
-    save_image(image, figures_dir / "warm_start_fold_stability.png", dpi)
+            axis.plot(group["fold"], group[metric], marker="o", linewidth=2, markersize=4, color=color, label=setting)
+        axis.set_title(title)
+        axis.set_xlabel("Fold")
+        axis.set_ylabel(ylabel)
+        axis.xaxis.set_major_locator(MaxNLocator(integer=True))
+        axis.grid()
+        if metric.endswith("ratio"):
+            axis.yaxis.set_major_formatter(FuncFormatter(lambda value, _: f"{value:.2f}"))
+    handles, legend_labels = axes[0].get_legend_handles_labels()
+    figure.legend(handles, legend_labels, loc="upper right", bbox_to_anchor=(0.98, 0.95))
+    figure.tight_layout(rect=(0, 0, 1, 0.91))
+    save_figure(figure, figures_dir / "warm_start_fold_stability.png", dpi)
 
 
 def format_percent(value: float) -> str:
@@ -1017,6 +825,7 @@ def write_report(
 
 def main() -> None:
     args = parse_args()
+    apply_plot_style()
     figures_dir, tables_dir = prepare_output(args.output_dir)
 
     print("[1/4] Analyzing the Yamanishi08 DTI graph...")

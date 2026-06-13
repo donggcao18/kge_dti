@@ -1,66 +1,48 @@
 # Dataset Analysis
 
-This folder contains report-ready dataset analysis code for the DTI project.
+This folder contains the report-ready analysis for the Yamanishi08 dataset.
+All figures are generated with Matplotlib using the non-interactive `Agg`
+backend, so the script can run in terminal and notebook environments without a
+display server.
 
-## Run all analyses
+## Run
 
 From the repository root:
 
 ```powershell
-python analysis/dataset_analysis.py --datasets yamanishi_08 BioKG
+python report/analysis/dataset_analysis.py
 ```
 
-If the default `python` command is not working on this machine, use the bundled
-Codex Python runtime:
+Custom paths and image resolution can be supplied when needed:
 
 ```powershell
-& "C:\Users\ADMIN\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" analysis\dataset_analysis.py --datasets yamanishi_08 BioKG
+python report/analysis/dataset_analysis.py `
+  --data-dir data/yamanishi_08 `
+  --output-dir report/analysis/results/yamanishi_08 `
+  --dpi 300
 ```
 
 ## Outputs
 
-The script writes outputs to:
+The script recreates the `figures/` and `tables/` directories under the chosen
+output directory and writes:
 
 ```text
-analysis/results/
+report/analysis/results/yamanishi_08/
+  analysis_report.md
+  figures/
+  tables/
 ```
 
-For each dataset, it creates:
+Generated Matplotlib figures:
 
-```text
-analysis/results/<dataset>/tables/
-analysis/results/<dataset>/figures/
-analysis/results/<dataset>/analysis_report.md
-```
+- `dti_degree_distribution.png`
+- `dti_degree_rank.png`
+- `network_sparsity_summary.png`
+- `knowledge_graph_relation_distribution.png`
+- `feature_characteristics.png`
+- `warm_start_class_balance.png`
+- `warm_start_fold_stability.png`
 
-Important generated figures include:
-
-- `degree_distribution.png` or `.svg`: drug and protein target degree distributions.
-- `degree_ccdf_loglog.png` or `degree_rank_plot.svg`: heavy-tail analysis.
-- `top_hubs.png` or separate `.svg` hub charts: top drug and target hubs.
-- `kg_top_relations.png` or `.svg`: most frequent knowledge graph relation types.
-- `split_class_balance.png` or `.svg`: train/test positive and negative class balance.
-- `positive_entity_overlap.png` or `.svg`: cold-start and warm-start entity overlap.
-
-If `matplotlib` is installed, the script writes PNG figures. If it is not
-installed, the script falls back to dependency-light SVG charts.
-
-Important generated tables include:
-
-- `dti_network_summary.csv`
-- `drug_degrees.csv`
-- `target_degrees.csv`
-- `top_25_drug_hubs.csv`
-- `top_25_target_hubs.csv`
-- `kg_summary.csv`
-- `kg_relation_counts_combined.csv`
-- `feature_summary.csv`
-- `fold_level_split_stats.csv`
-- `split_summary.csv`
-
-The script also creates cross-dataset comparison files:
-
-```text
-analysis/results/dataset_comparison.csv
-analysis/results/dataset_comparison.png
-```
+The PNG filenames are stable because they are referenced by the report source.
+Use `--dpi` to control their rendering resolution.

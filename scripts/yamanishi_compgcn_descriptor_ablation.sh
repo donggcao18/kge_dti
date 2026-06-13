@@ -8,7 +8,7 @@ export HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-./.cache}"
 split="${SPLIT:-warm_start_1_10}"
 dataset="${DATASET:-yamanishi_08}"
 data_root="${DATA_ROOT:-/kaggle/input/datasets/ngcaovn/kge-dti/data}"
-variant="${ABLATION_VARIANT:-without-descriptors}"
+variant="${ABLATION_VARIANT:-without_descriptors}"
 output_dir="${OUTPUT_DIR:-./output/descriptor_ablation_compgcn_${split}}"
 
 kge_model="${KGE_MODEL:-compgcn}"

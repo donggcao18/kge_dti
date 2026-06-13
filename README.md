@@ -105,6 +105,66 @@ python src/kge_nfm.py \
 
 `--compgcn-composition` accepts the paper's three entity-relation composition families: `sub`, `mult`, and `corr`.
 
+## NFM Descriptor Ablation
+
+After a normal run has saved the fold-specific KGE checkpoints, the NFM can be
+retrained without repeating KGE training:
+
+```bash
+python src/kge_nfm.py \
+  --dataset yamanishi_08 \
+  --split warm_start_1_10 \
+  --folds 10 \
+  --device auto \
+  --nfm-only \
+  --kge-checkpoint-dir output/kge_nfm_compgcn_warm_start/model \
+  --descriptor-ablation all \
+  --output-dir output/nfm_ablation_compgcn_warm_start \
+  --nfm-epochs 200 \
+  --batch-size 20000 \
+  --nfm-sparse-embedding-dim 50 \
+  --nfm-lr 0.001 \
+  --nfm-weight-decay 0.00001 \
+  --nfm-hidden-units 128,128 \
+  --nfm-patience 10
+```
+
+`--descriptor-ablation all` trains these NFM variants with the same saved KGE
+embeddings, folds, hyperparameters, and random seed:
+
+- `full`: KGE embeddings, Morgan fingerprint, and protein CTD descriptor.
+- `without_protein`: removes the protein CTD descriptor.
+- `without_morgan`: removes the Morgan fingerprint.
+- `without_descriptors`: removes both descriptor blocks and retains KGE features.
+
+The Yamanishi protein input is the CTD sequence descriptor in `pro_ctd.txt`,
+not a three-dimensional protein structure representation. The ablation tables
+are written to:
+
+```text
+output/.../ablation/auc/nfm_ablation_by_fold.csv
+output/.../ablation/auc/nfm_ablation_summary.csv
+```
+
+Individual comparisons can use `--descriptor-ablation without-protein`,
+`without-morgan`, or `without-descriptors`. Each comparison also trains the
+`full` variant so its metric delta is available.
+
+The configurable launcher for this experiment is:
+
+```bash
+bash scripts/yamanishi_compgcn_descriptor_ablation.sh
+```
+
+For one descriptor comparison, set `ABLATION_VARIANT` to `without-protein`,
+`without-morgan`, or `without-descriptors`. For example:
+
+```bash
+ABLATION_VARIANT=without-morgan \
+KGE_CHECKPOINT_DIR=./output/kge_nfm_compgcn_warm_start_1_10/model \
+bash scripts/yamanishi_compgcn_descriptor_ablation.sh
+```
+
 ## Outputs
 
 The PyTorch runner writes fold-specific artifacts:

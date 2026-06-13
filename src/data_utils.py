@@ -140,6 +140,16 @@ def merge_features(
     spec: DatasetSpec,
     use_protein_features: bool,
 ) -> np.ndarray:
+    drug_features, protein_features = merge_feature_blocks(pairs, drug_df, protein_df, spec)
+    return np.concatenate([drug_features, protein_features], axis=1) if use_protein_features else drug_features
+
+
+def merge_feature_blocks(
+    pairs: pd.DataFrame,
+    drug_df: pd.DataFrame,
+    protein_df: pd.DataFrame,
+    spec: DatasetSpec,
+) -> tuple[np.ndarray, np.ndarray]:
     drug_merged = pairs.merge(drug_df, how="left", left_on="head", right_on=spec.drug_id_col)
     protein_merged = pairs.merge(protein_df, how="left", left_on="tail", right_on=spec.protein_id_col)
 
@@ -148,11 +158,11 @@ def merge_features(
     drug_features = drug_features.select_dtypes(include=[np.number]).to_numpy(dtype=np.float32)
     protein_features = protein_features.select_dtypes(include=[np.number]).to_numpy(dtype=np.float32)
 
-    features = np.concatenate([drug_features, protein_features], axis=1) if use_protein_features else drug_features
-    if np.isnan(features).any():
-        missing = pairs.loc[np.isnan(features).any(axis=1), ["head", "tail"]].head()
-        raise ValueError(f"Missing descriptor features for some pairs, examples:\n{missing}")
-    return features
+    for name, features in [("drug", drug_features), ("protein", protein_features)]:
+        if np.isnan(features).any():
+            missing = pairs.loc[np.isnan(features).any(axis=1), ["head", "tail"]].head()
+            raise ValueError(f"Missing {name} descriptor features for some pairs, examples:\n{missing}")
+    return drug_features, protein_features
 
 
 def encode_labels(values: Iterable[str]) -> dict[str, int]:

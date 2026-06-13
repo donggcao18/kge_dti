@@ -22,6 +22,10 @@ def ensure_output_dirs(output_root: Path) -> None:
         "curve/roc_nfm",
         "curve/pr_nfm",
         "predictions",
+        "ablation/auc",
+        "ablation/curve/roc",
+        "ablation/curve/pr",
+        "ablation/predictions",
     ]:
         (output_root / relative).mkdir(parents=True, exist_ok=True)
 

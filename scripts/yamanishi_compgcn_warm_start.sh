@@ -6,7 +6,7 @@ export HF_HOME="./.cache"
 export HF_DATASETS_CACHE="./.cache"
 
 
-split="warm_start_1_1"
+split="warm_start_1_10"
 dataset="yamanishi_08"
 data_root="${DATA_ROOT:-/kaggle/input/datasets/ngcaovn/kge-dti/data}"
 model=compgcn

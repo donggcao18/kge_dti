@@ -7,6 +7,76 @@ import torch
 from constants import TRIPLE_COLUMNS
 
 
+def _make_triples_factory(train_triples: pd.DataFrame, create_inverse_triples: bool):
+    from pykeen.triples import TriplesFactory
+
+    return TriplesFactory.from_labeled_triples(
+        train_triples[TRIPLE_COLUMNS].to_numpy(dtype=str),
+        create_inverse_triples=create_inverse_triples,
+    )
+
+
+def _make_distmult(triples_factory, embedding_dim: int, seed: int, device: str):
+    from pykeen.models import DistMult
+
+    return DistMult(
+        triples_factory=triples_factory,
+        embedding_dim=embedding_dim,
+        loss="MarginRankingLoss",
+        loss_kwargs={"margin": 1.0},
+        random_seed=seed,
+    ).to(device)
+
+
+def _make_compgcn(
+    triples_factory,
+    embedding_dim: int,
+    seed: int,
+    device: str,
+    num_layers: int,
+    layer_dropout: float,
+    composition: str,
+):
+    from pykeen.models import CompGCN
+    from pykeen.nn.compositions import (
+        CircularCorrelationCompositionModule,
+        MultiplicationCompositionModule,
+        SubtractionCompositionModule,
+    )
+
+    if num_layers < 1:
+        raise ValueError(f"CompGCN requires at least one layer, got {num_layers}.")
+    if not 0.0 <= layer_dropout < 1.0:
+        raise ValueError(f"CompGCN dropout must be in [0.0, 1.0), got {layer_dropout}.")
+
+    composition_modules = {
+        "sub": SubtractionCompositionModule,
+        "mult": MultiplicationCompositionModule,
+        "corr": CircularCorrelationCompositionModule,
+    }
+    if composition not in composition_modules:
+        raise ValueError(
+            f"Unsupported CompGCN composition '{composition}'. "
+            f"Expected one of: {', '.join(composition_modules)}."
+        )
+
+    return CompGCN(
+        triples_factory=triples_factory,
+        embedding_dim=embedding_dim,
+        encoder_kwargs={
+            "num_layers": num_layers,
+            "dims": embedding_dim,
+            "layer_kwargs": {
+                "dropout": layer_dropout,
+                "composition": composition_modules[composition],
+            },
+        },
+        loss="MarginRankingLoss",
+        loss_kwargs={"margin": 1.0},
+        random_seed=seed,
+    ).to(device)
+
+
 def require_entities(factory, entities: Iterable[str], context: str) -> None:
     missing = sorted(set(entities).difference(factory.entity_to_id))
     if missing:
@@ -28,20 +98,10 @@ def train_distmult(
     num_negs_per_pos: int,
     use_tqdm: bool,
 ):
-    from pykeen.models import DistMult
     from pykeen.training import SLCWATrainingLoop
-    from pykeen.triples import TriplesFactory
 
-    triples_factory = TriplesFactory.from_labeled_triples(
-        train_triples[TRIPLE_COLUMNS].to_numpy(dtype=str),
-    )
-    model = DistMult(
-        triples_factory=triples_factory,
-        embedding_dim=embedding_dim,
-        loss="MarginRankingLoss",
-        loss_kwargs={"margin": 1.0},
-        random_seed=seed,
-    ).to(device)
+    triples_factory = _make_triples_factory(train_triples, create_inverse_triples=False)
+    model = _make_distmult(triples_factory, embedding_dim, seed, device)
 
     training_loop = SLCWATrainingLoop(
         model=model,
@@ -75,51 +135,18 @@ def train_compgcn(
     layer_dropout: float = 0.0,
     composition: str = "mult",
 ):
-    from pykeen.models import CompGCN
-    from pykeen.nn.compositions import (
-        CircularCorrelationCompositionModule,
-        MultiplicationCompositionModule,
-        SubtractionCompositionModule,
-    )
     from pykeen.training import SLCWATrainingLoop
-    from pykeen.triples import TriplesFactory
 
-    if num_layers < 1:
-        raise ValueError(f"CompGCN requires at least one layer, got {num_layers}.")
-    if not 0.0 <= layer_dropout < 1.0:
-        raise ValueError(f"CompGCN dropout must be in [0.0, 1.0), got {layer_dropout}.")
-
-    composition_modules = {
-        "sub": SubtractionCompositionModule,
-        "mult": MultiplicationCompositionModule,
-        "corr": CircularCorrelationCompositionModule,
-    }
-    if composition not in composition_modules:
-        raise ValueError(
-            f"Unsupported CompGCN composition '{composition}'. "
-            f"Expected one of: {', '.join(composition_modules)}."
-        )
-
-    triples_factory = TriplesFactory.from_labeled_triples(
-        train_triples[TRIPLE_COLUMNS].to_numpy(dtype=str),
-        create_inverse_triples=True,
+    triples_factory = _make_triples_factory(train_triples, create_inverse_triples=True)
+    model = _make_compgcn(
+        triples_factory,
+        embedding_dim,
+        seed,
+        device,
+        num_layers,
+        layer_dropout,
+        composition,
     )
-
-    model = CompGCN(
-        triples_factory=triples_factory,
-        embedding_dim=embedding_dim,
-        encoder_kwargs={
-            "num_layers": num_layers,
-            "dims": embedding_dim,
-            "layer_kwargs": {
-                "dropout": layer_dropout,
-                "composition": composition_modules[composition],
-            },
-        },
-        loss="MarginRankingLoss",
-        loss_kwargs={"margin": 1.0},
-        random_seed=seed,
-    ).to(device)
 
     training_loop = SLCWATrainingLoop(
         model=model,
@@ -137,6 +164,40 @@ def train_compgcn(
         use_tqdm_batch=use_tqdm,
     )
     return model, triples_factory, losses
+
+
+def load_kge_checkpoint(checkpoint_path, train_triples: pd.DataFrame, device: str):
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
+    saved_args = checkpoint.get("args", {})
+    model_name = saved_args.get("kge_model", "distmult")
+    seed = int(saved_args.get("seed", 0))
+    embedding_dim = int(saved_args.get("embedding_dim", 400))
+    triples_factory = _make_triples_factory(
+        train_triples,
+        create_inverse_triples=model_name == "compgcn",
+    )
+
+    if checkpoint.get("entity_to_id") != triples_factory.entity_to_id:
+        raise ValueError(f"Entity mapping in {checkpoint_path} does not match the current fold data.")
+    if checkpoint.get("relation_to_id") != triples_factory.relation_to_id:
+        raise ValueError(f"Relation mapping in {checkpoint_path} does not match the current fold data.")
+
+    if model_name == "compgcn":
+        model = _make_compgcn(
+            triples_factory,
+            embedding_dim,
+            seed,
+            device,
+            int(saved_args.get("compgcn_layers", 1)),
+            float(saved_args.get("compgcn_dropout", 0.0)),
+            saved_args.get("compgcn_composition", "mult"),
+        )
+    else:
+        model = _make_distmult(triples_factory, embedding_dim, seed, device)
+
+    model.load_state_dict(checkpoint["model_state_dict"])
+    model.eval()
+    return model, triples_factory, checkpoint.get("losses", []), saved_args
 
 
 def _prepare_model_for_inference(model) -> None:
@@ -164,11 +225,16 @@ def entity_embeddings(model, triples_factory, labels: Iterable[str], device: str
 
 
 def pair_embeddings(model, triples_factory, pairs: pd.DataFrame, device: str) -> np.ndarray:
+    heads, tails = pair_embedding_blocks(model, triples_factory, pairs, device)
+    return np.concatenate([heads, tails], axis=1)
+
+
+def pair_embedding_blocks(model, triples_factory, pairs: pd.DataFrame, device: str) -> tuple[np.ndarray, np.ndarray]:
     _prepare_model_for_inference(model)
 
     heads = entity_embeddings(model, triples_factory, pairs["head"].astype(str).tolist(), device)
     tails = entity_embeddings(model, triples_factory, pairs["tail"].astype(str).tolist(), device)
-    return np.concatenate([heads, tails], axis=1)
+    return heads, tails
 
 
 def score_triples(model, triples_factory, triples: pd.DataFrame, device: str, batch_size: int) -> np.ndarray:

@@ -257,7 +257,17 @@ an alternative encoder within the same KGE-NFM framework.
 
 CompGCN is a multi-relational graph convolutional encoder
 \cite{vashishth2020composition}. Unlike a standard GCN, it must account for
-both the semantic type and direction of every edge. For each original triple:
+both the semantic type and direction of every edge.
+
+The standard update in Equation~\ref{eq:background_gcn_update} uses one shared
+transformation and does not distinguish relation semantics. The relational
+update in Equation~\ref{eq:background_relational_gcn_update} introduces
+$\mathbf{W}_{r}^{k}$ for each relation, but its parameter count grows with the
+number of relation types. CompGCN retains relational message passing while
+replacing relation-specific matrices with entity--relation composition and
+three direction-specific transformations.
+
+For each original triple:
 
 \begin{equation}
     (u,r,v),
@@ -390,7 +400,10 @@ This update keeps relation representations aligned with the evolving entity
 embedding space. Entity and relation states therefore evolve together across
 the encoder. The trainable parameters include the initial entity and relation
 representations, the direction-specific matrices at each layer, and the
-relation transformation matrices.
+relation transformation matrices. During training, gradients from the
+link-prediction loss update $\mathbf{W}_{O}^{k}$, $\mathbf{W}_{I}^{k}$,
+$\mathbf{W}_{S}^{k}$, $\mathbf{W}_{rel}^{k}$, and the initial entity and
+relation embeddings jointly.
 
 The original CompGCN formulation also proposes basis decomposition for graphs
 with many relations. A relation embedding can be represented as:

@@ -49,8 +49,9 @@ entirely unseen entities. Two positive-to-negative class ratios are used.
 
 The warm-start 1:1 setting contains one positive interaction for each sampled
 negative interaction. This balanced setting provides a controlled assessment
-of model discrimination. The warm-start 1:10 setting contains one positive
-interaction for every ten sampled negative interactions. This setting more
+of model discrimination.
+
+The warm-start 1:10 setting contains one positive interaction for every ten sampled negative interactions. This setting more
 closely reflects DTI sparsity, where known interactions form only a small
 fraction of all possible pairs. Both ROC-AUC and PR-AUC are reported, with
 PR-AUC being particularly informative under the imbalanced 1:10 setting.
@@ -153,6 +154,59 @@ contexts of a candidate drug and protein. These embeddings can be combined
 with molecular and sequence descriptors in a downstream DTI model. This design
 is useful for low-degree entities, whose direct interaction evidence is
 limited but whose auxiliary biomedical relations remain informative.
+
+\section{Graph Convolutional Networks}
+
+\subsection{GCN on Undirected Graphs}
+
+For an undirected graph $\mathcal{G}=(\mathcal{V},\mathcal{E},\mathbf{X})$, a
+Graph Convolutional Network (GCN) updates node representations by aggregating
+normalized neighboring features \cite{kipf2017semi}:
+
+\begin{equation}
+    \mathbf{H}^{k+1}
+    =
+    \sigma
+    \left(
+        \widehat{\mathbf{A}}\mathbf{H}^{k}\mathbf{W}^{k}
+    \right),
+    \qquad
+    \mathbf{H}^{0}=\mathbf{X},
+    \label{eq:background_gcn_update}
+\end{equation}
+where
+$\widehat{\mathbf{A}}=\widetilde{\mathbf{D}}^{-1/2}
+(\mathbf{A}+\mathbf{I})\widetilde{\mathbf{D}}^{-1/2}$ is the normalized
+adjacency matrix with self-connections, $\mathbf{W}^{k}$ is a learnable
+layer-specific transformation, and $\sigma$ is an activation function.
+Stacking layers allows each node to incorporate information from increasingly
+distant neighborhoods.
+
+\subsection{GCN on Multi-Relational Graphs}
+
+A knowledge graph additionally assigns a relation type and direction to each
+edge. A direct multi-relational extension uses a relation-specific
+transformation for each neighboring edge:
+
+\begin{equation}
+    \mathbf{h}_{v}^{k+1}
+    =
+    \sigma
+    \left(
+        \sum_{(u,r)\in\mathcal{N}(v)}
+        c_{v,r}^{-1}\mathbf{W}_{r}^{k}\mathbf{h}_{u}^{k}
+    \right),
+    \label{eq:background_relational_gcn_update}
+\end{equation}
+where $\mathbf{W}_{r}^{k}$ transforms messages associated with relation $r$
+and $c_{v,r}$ is a normalization constant. A separate matrix for every
+relation captures edge semantics but causes parameter growth as the relation
+vocabulary expands. Directed-GCN adds inverse edges and shares transformations
+according to edge direction \cite{marcheggiani2017encoding}, while R-GCN uses
+basis or block-diagonal decomposition \cite{schlichtkrull2018modeling}.
+CompGCN instead composes entity and relation embeddings and uses
+direction-specific transformations; its update rule is specified in
+Chapter~\ref{chap:methodology}.
 
 \section{Existing DTI Prediction Approaches}
 

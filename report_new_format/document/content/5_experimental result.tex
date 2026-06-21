@@ -1,0 +1,285 @@
+\chapter{Experimental Setup and Results}
+\label{chap:experiments}
+
+\section{Experimental Setup}
+
+The experiments evaluate drug--target interaction prediction on the Yamanishi08
+dataset under two class-ratio settings: Yamanishi 1:1 and Yamanishi 1:10. Each
+setting contains ten supplied folds. The same fold definitions are used by the
+classical descriptor baselines and the KGE-NFM variants so that their average
+ROC-AUC and PR-AUC values are directly comparable.
+
+The classical baselines use the 1,024-dimensional Morgan fingerprint for each
+drug and the CTD descriptor for each target protein. In the KGE-NFM pipeline,
+the CTD block is reduced by PCA before it is combined with fold-specific entity
+representations learned from the knowledge graph. DistMult and CompGCN are
+evaluated as alternative KGE encoders, while the downstream NFM and evaluation
+procedure are kept fixed.
+
+\begin{table}[H]
+\centering
+\caption{Selected experimental configuration}
+\label{tab:experiment_setup}
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Item} & \textbf{Setting} \\
+\midrule
+Dataset & Yamanishi08 \\
+Evaluation settings & Yamanishi 1:1 and Yamanishi 1:10 \\
+Number of folds & 10 per setting \\
+Drug descriptor & 1,024-dimensional Morgan fingerprint \\
+Protein descriptor & CTD sequence descriptor reduced to 100 PCA components \\
+KGE encoders & DistMult and CompGCN \\
+Selected CompGCN embedding dimension & 200 \\
+KGE training epochs & 50 \\
+Negative samples per positive triple & 5 \\
+Selected CompGCN layers & 3 \\
+CompGCN composition & Element-wise multiplication \\
+CompGCN dropout & 0.1 \\
+NFM hidden units & 128 and 128 \\
+NFM training epochs & Up to 200 with early stopping \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The final CompGCN configuration in Table~\ref{tab:experiment_setup} is selected
+from the tuning experiments reported in Section~\ref{sec:hyperparameter_tuning}.
+Yamanishi 1:10 is used for tuning because its larger negative-to-positive ratio
+provides the more demanding ranking setting. The resulting configuration is
+then used for the principal comparison and the ablation analysis.
+
+\section{Evaluation Metrics}
+
+\subsection{ROC-AUC}
+
+ROC-AUC measures the probability that a randomly selected positive interaction
+is ranked above a randomly selected negative interaction. It summarizes ranking
+quality over all classification thresholds, although it may appear optimistic
+when the negative class is much larger than the positive class.
+
+\subsection{PR-AUC}
+
+PR-AUC summarizes the precision--recall curve and therefore emphasizes the
+quality of positive predictions. It is particularly informative for Yamanishi
+1:10, where false-positive predictions have a stronger effect on precision.
+
+\section{Compared Methods}
+
+\begin{table}[H]
+\centering
+\caption{Models included in the main comparison}
+\label{tab:baseline_models}
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Model} & \textbf{Description} \\
+\midrule
+Logistic Regression & Linear classifier trained on the Morgan fingerprint and protein CTD descriptor \\
+Random Forest & Bagged decision-tree classifier trained on the descriptor features \\
+XGBoost & Gradient-boosted decision-tree classifier trained on the descriptor features \\
+DistMult-NFM & NFM predictor combining descriptors with entity embeddings learned by DistMult \\
+CompGCN-NFM & NFM predictor combining descriptors with relation-aware entity embeddings learned by CompGCN \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Logistic Regression provides a linear reference, whereas Random Forest and
+XGBoost represent non-linear descriptor-based baselines. DistMult-NFM measures
+the benefit of adding a conventional multiplicative KGE representation, and
+CompGCN-NFM evaluates whether relation-aware neighborhood aggregation provides
+an additional improvement.
+
+\section{Main Results}
+\label{sec:main_results}
+
+Table~\ref{tab:main_results} reports the average result across the ten folds for
+each model. Both Yamanishi settings are presented in one table to show how the
+models respond to the change in class ratio. The best result in each column is
+shown in bold.
+
+\begin{table}[H]
+\centering
+\caption{Average DTI prediction performance on Yamanishi 1:1 and Yamanishi 1:10}
+\label{tab:main_results}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lcccc}
+\toprule
+& \multicolumn{2}{c}{\textbf{Yamanishi 1:1}} &
+\multicolumn{2}{c}{\textbf{Yamanishi 1:10}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+\textbf{Model} & \textbf{ROC-AUC} & \textbf{PR-AUC} &
+\textbf{ROC-AUC} & \textbf{PR-AUC} \\
+\midrule
+Logistic Regression & 0.7139 & 0.6613 & 0.7255 & 0.1726 \\
+Random Forest       & 0.9024 & 0.9014 & 0.9486 & 0.7743 \\
+XGBoost             & 0.9051 & 0.8948 & 0.9225 & 0.6198 \\
+DistMult-NFM        & 0.9413 & 0.9390 & 0.9804 & 0.9315 \\
+CompGCN-NFM         & \textbf{0.9689} & \textbf{0.9681} &
+                      \textbf{0.9866} & \textbf{0.9362} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+CompGCN-NFM achieves the best average value for both metrics in both settings.
+On Yamanishi 1:1, it improves over DistMult-NFM by 0.0276 ROC-AUC and 0.0291
+PR-AUC. On Yamanishi 1:10, the corresponding gains are smaller but remain
+positive, at 0.0063 ROC-AUC and 0.0047 PR-AUC. Both KGE encoders therefore add
+useful relational information beyond the descriptor-only baselines, while
+CompGCN provides the strongest representation for the downstream NFM.
+
+Among the classical models, Random Forest is the strongest baseline on
+Yamanishi 1:10, reaching 0.9486 ROC-AUC and 0.7743 PR-AUC. CompGCN-NFM improves
+these values by 0.0380 and 0.1619, respectively. The PR-AUC difference is
+especially important because it shows that the proposed pipeline preserves
+substantially higher precision under the more imbalanced class ratio.
+
+The transition from Yamanishi 1:1 to Yamanishi 1:10 affects PR-AUC much more
+strongly than ROC-AUC. Logistic Regression falls from 0.6613 to 0.1726 PR-AUC,
+and the two tree-based baselines also decline. In contrast, DistMult-NFM and
+CompGCN-NFM retain PR-AUC values above 0.93. This contrast supports the use of
+knowledge graph representations and non-linear feature interaction modeling
+when the candidate set contains many more negative pairs.
+
+% Replace this framed box with the final fold-specific candle chart, for example:
+% \includegraphics[width=0.96\textwidth]{images/results/fold_specific_candle_chart.pdf}
+\begin{figure}[H]
+    \centering
+    \fbox{\parbox[c][5.0cm][c]{0.90\textwidth}{\centering
+    Fold-specific candle-chart placeholder\\[6pt]
+    Add the ROC-AUC and PR-AUC distributions across the ten folds for each
+    model on Yamanishi 1:1 and Yamanishi 1:10.}}
+    \caption{Fold-specific performance distributions of the evaluated models.
+    The final candle chart will complement the average results in
+    Table~\ref{tab:main_results} by showing variability across folds.}
+    \label{fig:fold_specific_candle_results}
+\end{figure}
+
+Figure~\ref{fig:fold_specific_candle_results} is reserved for the fold-level
+analysis. Since the current summary file contains average values only, no claim
+about variance or statistical significance is made at this stage. The final
+chart should be used to assess whether the average improvements are stable
+across folds or are driven by a small number of splits.
+
+\section{Hyperparameter Tuning}
+\label{sec:hyperparameter_tuning}
+
+Hyperparameter tuning is conducted on Yamanishi 1:10. The recorded experiments
+follow a staged search over the embedding dimension, number of negative samples,
+and number of CompGCN layers. Parameters not identified in a configuration name
+are kept at the corresponding run defaults.
+
+\begin{table}[H]
+\centering
+\caption{CompGCN hyperparameter tuning results on Yamanishi 1:10}
+\label{tab:compgcn_tuning}
+\small
+\begin{tabularx}{\textwidth}{Xcc}
+\toprule
+\textbf{Recorded configuration} & \textbf{ROC-AUC} & \textbf{PR-AUC} \\
+\midrule
+Embedding dimension 200 & 0.986336 & 0.932113 \\
+Embedding dimension 400 & 0.980704 & 0.889596 \\
+Embedding dimension 600 & 0.965040 & 0.839139 \\
+Embedding 200, 3 negatives & 0.985824 & 0.932002 \\
+Embedding 200, 5 negatives & 0.986321 & 0.933304 \\
+Embedding 200, 5 negatives, 1 layer & 0.985215 & 0.927070 \\
+Embedding 200, 5 negatives, 3 layers & \textbf{0.986632} & \textbf{0.936223} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The dimension search favors 200-dimensional embeddings. Increasing the
+dimension to 400 and 600 reduces both metrics, with PR-AUC decreasing from
+0.932113 to 0.889596 and 0.839139. This result suggests that a larger embedding
+space adds unnecessary model capacity for the available graph and training
+data rather than improving the interaction representation.
+
+With the embedding dimension fixed at 200, five negative samples produce a
+higher PR-AUC than three negative samples. The layer comparison then shows that
+three CompGCN layers outperform one layer, raising PR-AUC from 0.927070 to
+0.936223. Consequently, the selected configuration uses a 200-dimensional
+embedding, five negative samples per positive triple, and three CompGCN layers.
+
+\section{Ablation Study}
+\label{sec:ablation_study}
+
+The ablation study is performed on Yamanishi 1:10 using the selected CompGCN
+configuration. It separates the effect of the standalone KGE prediction,
+descriptor-based NFM prediction, dense KGE embeddings, and the complete
+multimodal pipeline. The full CompGCN-NFM result from
+Table~\ref{tab:main_results} is included as the reference configuration.
+
+\begin{table}[H]
+\centering
+\caption{Ablation results on Yamanishi 1:10}
+\label{tab:ablation_study}
+\small
+\begin{tabularx}{\textwidth}{Xrrrr}
+\toprule
+\textbf{Configuration} & \textbf{ROC-AUC} & \textbf{PR-AUC} &
+\textbf{$\Delta$ ROC vs. full} & \textbf{$\Delta$ PR vs. full} \\
+\midrule
+KGE only & 0.619957 & 0.145284 & $-0.366675$ & $-0.790939$ \\
+NFM only, without KGE dense embeddings & 0.929957 & 0.845284 & $-0.056675$ & $-0.090939$ \\
+Without Morgan and protein descriptors & 0.969570 & 0.922840 & $-0.017062$ & $-0.013383$ \\
+Full CompGCN-NFM & \textbf{0.986632} & \textbf{0.936223} & 0.000000 & 0.000000 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The standalone KGE scorer performs poorly, particularly in PR-AUC, which shows
+that graph scoring alone is insufficient for the final binary prediction task.
+The NFM-only configuration is substantially stronger, achieving 0.929957
+ROC-AUC and 0.845284 PR-AUC without the dense KGE embedding vectors. This
+confirms that the descriptor fields and NFM interaction mechanism provide a
+strong predictive foundation. Adding the KGE dense embeddings in the full model
+improves ROC-AUC by 0.0567 and PR-AUC by 0.0909, with the larger PR-AUC gain
+showing that graph-derived features are particularly useful for ranking positive
+interactions under the 1:10 class ratio.
+
+Removing both the Morgan fingerprint and protein CTD descriptor produces a
+smaller reduction. The remaining KGE-NFM configuration reaches 0.969570
+ROC-AUC and 0.922840 PR-AUC, corresponding to losses of 0.0171 and 0.0134 from
+the full model. Thus, the KGE embeddings and NFM interaction layer account for
+most of the predictive performance, while the molecular and sequence
+descriptors provide a smaller but consistent complementary improvement. The
+complete model remains strongest because it combines both representation
+sources rather than relying on either source alone.
+
+\section{Discussion}
+
+The principal result is the consistent ordering of the average scores:
+CompGCN-NFM performs best, followed by DistMult-NFM, while the classical
+descriptor baselines remain behind the KGE-enhanced models. The improvement of
+CompGCN over DistMult is larger on Yamanishi 1:1, but CompGCN also retains the
+best ROC-AUC and PR-AUC on Yamanishi 1:10. This supports the methodological
+motivation for relation-aware message passing: neighborhood information can
+refine entity representations beyond the multiplicative interaction captured
+by DistMult.
+
+The difference between ROC-AUC and PR-AUC across the two settings also
+illustrates why both metrics are required. Several models obtain a higher
+ROC-AUC on Yamanishi 1:10 than on Yamanishi 1:1 even though their PR-AUC falls.
+ROC-AUC therefore does not fully expose the loss of precision caused by the
+larger negative class. The comparatively small PR-AUC reduction of the two
+KGE-NFM models indicates better false-positive control under class imbalance.
+
+The tuning and ablation results lead to two additional observations. First,
+larger embeddings are not automatically beneficial; the 200-dimensional model
+outperforms the 400- and 600-dimensional alternatives. Second, neither the
+standalone KGE scorer nor the descriptor-based NFM fully matches the complete
+pipeline. The strongest result is obtained when graph embeddings and biological
+descriptors are combined in the downstream interaction model.
+
+\section{Limitations}
+
+The reported results have several limitations. First, the summary CSV contains
+fold averages but not the fold-specific values required for confidence
+intervals or paired significance testing. These values can be presented in
+Figure~\ref{fig:fold_specific_candle_results} when the final candle chart is
+added. Second, the tuning experiments form a staged search rather than an
+exhaustive exploration of all parameter combinations. Third, unobserved
+drug--target pairs are treated as negatives even though some may represent
+interactions that have not yet been experimentally confirmed. Finally, the
+current comparison covers the two Yamanishi class-ratio settings and does not
+by itself establish generalization to entirely unseen drugs or proteins.

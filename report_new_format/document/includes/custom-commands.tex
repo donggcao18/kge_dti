@@ -1,0 +1,51 @@
+% Shared commands and formatting used by the report.
+
+\definecolor{darkblue}{rgb}{0,0,.6}
+\definecolor{darkred}{rgb}{.7,0,0}
+\definecolor{darkgreen}{rgb}{0,.6,0}
+\definecolor{darkestred}{rgb}{.8,.1,0}
+\definecolor{headingblue}{HTML}{17324D}
+\definecolor{lightgray}{rgb}{.9,.9,.9}
+
+\newcommand{\customhrule}[1]{%
+    \rule[1.4pt]{\linewidth}{#1}%
+}
+
+\newcommand{\doublerule}[1][.4pt]{%
+    \noindent
+    \makebox[0pt][l]{\rule[.7ex]{\linewidth}{#1}}%
+    \rule[1pt]{\linewidth}{#1}\par%
+}
+
+\newcommand{\bluetext}[1]{\textcolor{darkblue}{#1}}
+\newcommand{\redtext}[1]{\textcolor{darkred}{#1}}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+
+\setlist{noitemsep}
+
+\titleformat{\section}
+    {\normalfont\Large\bfseries\color{headingblue}}
+    {\thesection}
+    {1em}
+    {}
+    [\titlerule]
+\titlespacing{\section}{0pt}{12pt}{9pt}
+
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0.5pt}
+\renewcommand{\thefootnote}{\arabic{footnote}}
+
+\fancypagestyle{plain}{%
+    \fancyhf{}%
+    \fancyhead[LE,RO]{\small\textbf{\rightmark}}%
+    \fancyfoot[RO,LE]{\small\thepage}%
+    \fancyfoot[LO,RE]{\small \textbf{\coursenumber} - \textbf{\coursetitle}}%
+    \renewcommand{\headrulewidth}{0.5pt}%
+    \renewcommand{\footrulewidth}{0.5pt}%
+}
+
+\pagestyle{plain}
+

@@ -38,12 +38,12 @@ but they may be connected to similar diseases, pathways, or protein families in
 the graph. Likewise, two proteins may share functional context even when their
 sequence-level descriptors are not sufficient.
 
-This project studies a machine learning pipeline that uses both descriptor
-features and knowledge graph representation learning. The first part of the
-pipeline learns entity representations from biomedical graph triples using
-knowledge graph embedding (KGE) models. The second part combines these learned
-representations with drug and protein descriptors and trains a neural
-factorization machine (NFM) for final DTI classification.
+This report studies a hybrid prediction pipeline that combines descriptor
+features with knowledge graph representation learning. The first stage learns
+entity representations from biomedical triples using knowledge graph embedding
+(KGE) models. The second stage combines these learned representations with drug
+and protein descriptors and trains a neural factorization machine (NFM) for
+final DTI classification.
 
 \section{Problem Context}
 
@@ -82,9 +82,10 @@ proteins that have limited observed interaction history.
 
 \section{Motivation}
 
-The main motivation of this project is to improve DTI prediction by combining
-two complementary sources of information: descriptor-based features and
-knowledge graph embeddings.
+The central motivation is that DTI prediction is not only a molecular matching
+problem and not only a graph completion problem. A drug--target pair is better
+represented when direct molecular or sequence evidence is considered together
+with biomedical context from the surrounding knowledge graph.
 
 Descriptor features provide direct information about the entities. Drug
 descriptors may encode molecular structure, chemical fingerprints, or other
@@ -126,12 +127,11 @@ other hand, graph-based methods can capture biomedical context, but graph
 embeddings alone may not fully represent the chemical and biological properties
 of individual drugs and proteins.
 
-This project is motivated by the gap between these two perspectives. A
+This gap motivates the hybrid pipeline evaluated in this report. A
 descriptor-only model may miss relational evidence, while a graph-only model may
-ignore useful entity-level features. Therefore, a hybrid pipeline is explored:
-KGE models learn representations from biomedical knowledge graphs, and an NFM
-model combines those representations with descriptor features for supervised DTI
-prediction.
+ignore useful entity-level features. KGE models are therefore used to learn
+biomedical graph representations, and an NFM model combines those
+representations with descriptor features for supervised DTI prediction.
 
 The project also compares different KGE choices. DistMult is treated as a
 lightweight baseline because it is efficient and widely used. CompGCN is
@@ -162,8 +162,8 @@ The specific objectives are:
 
     \item to train an NFM classifier for final interaction prediction;
 
-    \item to evaluate the model using ROC-AUC and PR-AUC across selected
-    datasets and data splits;
+    \item to evaluate the model using ROC-AUC and PR-AUC on the Yamanishi08
+    warm-start settings;
 
     \item to compare the proposed KGE-NFM pipeline with relevant baseline
     approaches.
@@ -171,15 +171,16 @@ The specific objectives are:
 
 \section{Scope of the Project}
 
-This project focuses on computational prediction rather than experimental
-validation. The model outputs probability scores for candidate drug--target
-pairs, but these predictions should be interpreted as prioritization signals
-rather than confirmed biological interactions.
+The study focuses on computational prediction rather than experimental
+validation. Model outputs are probability scores for candidate drug--target
+pairs, and should be interpreted as prioritization signals rather than
+confirmed biological interactions.
 
-The current implementation supports datasets such as \textit{Yamanishi08},
-\textit{BioKG}, and \textit{Hetionet}. The main pipeline is implemented in
-Python using PyTorch for neural model training and PyKEEN for knowledge graph
-embedding models.
+The experimental report focuses on the \textit{Yamanishi08} benchmark and its
+1:1 and 1:10 warm-start settings. The codebase contains loaders for additional
+biomedical datasets, but they are not used as evidence for the conclusions in
+this report. The main pipeline is implemented in Python using PyTorch for
+neural model training and PyKEEN for knowledge graph embedding models.
 
 \begin{description}
     \item[In scope:] dataset loading, preprocessing, KGE training, entity
@@ -191,18 +192,18 @@ embedding models.
     interpretation of each predicted interaction.
 \end{description}
 
-\section{Expected Contributions}
+\section{Contributions}
 
-The expected contributions of this project are:
+The contributions of this project are:
 
 \begin{itemize}
-    \item a clear implementation of a KGE-NFM pipeline for DTI prediction;
+    \item a reproducible implementation of a KGE-NFM pipeline for DTI prediction;
 
     \item an experimental comparison between lightweight and more expressive KGE
     models in the downstream DTI setting;
 
-    \item an evaluation framework using fold-based prediction outputs, ROC
-    curves, PR curves, and aggregate AUC metrics;
+    \item an evaluation framework using fold-based prediction outputs,
+    ROC-AUC, PR-AUC, hyperparameter tuning, and ablation analysis;
 
     \item a reusable report and code structure for future experiments on
     biomedical graph-based prediction tasks.

@@ -3,7 +3,7 @@
 
 \section{Dataset Overview}
 
-This project uses the \textit{Yamanishi08} benchmark for drug--target
+The experiments use the \textit{Yamanishi08} benchmark for drug--target
 interaction (DTI) prediction. The dataset represents known interactions as a
 bipartite graph whose two node sets are drugs and target proteins. Each
 observed edge denotes a known positive interaction, while the remaining
@@ -148,16 +148,15 @@ increase the amount of positive supervision. It only increases the number of
 sampled negative pairs, producing a more realistic but more imbalanced ranking
 problem. The 1:1 setting measures performance under balanced class exposure,
 whereas the 1:10 setting places greater emphasis on rejecting non-interacting
-candidates and is therefore expected to be more difficult, particularly for
-precision-oriented metrics.
+candidates and therefore makes precision-oriented metrics more demanding.
 
 The data audit found no duplicate rows, no train--test pair overlap, and no
 sampled-negative pair that appears in the known-positive file. The ten supplied
-splits should be treated as repeated warm-start holdouts rather than as a
+splits are treated as repeated warm-start holdouts rather than as a
 disjoint partition: together, their test sets contain 3,120 unique positive
 pairs, and some positive pairs occur in more than one test split. Experimental
-results are consequently reported as the mean and standard deviation across
-the supplied splits.
+results are therefore summarized across the supplied splits, with fold-level
+variation reserved for the distributional plots.
 
 \section{Implications for the Prediction Task}
 

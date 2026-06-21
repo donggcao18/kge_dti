@@ -3,13 +3,13 @@
 
 \section{Framework Overview}
 
-KGE-NFM (Knowledge graph embedding - Neural Factorization Machine) is the main DTI prediction framework studied in this project. It uses
-a two-stage design. First, a knowledge graph encoder learns drug and protein
-representations from biomedical triples. Second, these representations are
-combined with structural descriptors and processed by a Neural Factorization
-Machine (NFM) to predict DTI labels.
+KGE-NFM (Knowledge Graph Embedding--Neural Factorization Machine) is the main
+DTI prediction framework studied in this report. It follows a two-stage design.
+First, a knowledge graph encoder learns drug and protein representations from
+biomedical triples. Second, these representations are combined with molecular
+and sequence descriptors and processed by an NFM to predict DTI labels.
 
-This project evaluates two alternative encoder configurations within the same
+This report evaluates two alternative encoder configurations within the same
 framework: DistMult and CompGCN. The remaining stages, including feature
 construction, preprocessing, NFM architecture, and evaluation data, are kept
 consistent to support a controlled encoder comparison.
@@ -86,7 +86,7 @@ data flow is summarized in Figure~\ref{fig:kge_nfm_architecture}.
         }
     }
 }
-\caption{KGE-NFM framework with alternative DistMult and CompGCN encoders}
+\caption{KGE-NFM framework with alternative DistMult and CompGCN encoders.}
 \label{fig:kge_nfm_architecture}
 \end{figure}
 
@@ -417,7 +417,7 @@ with many relations. A relation embedding can be represented as:
 where $\mathbf{v}_{b}$ is a learned basis vector and $\alpha_{br}$ is the
 coefficient of basis $b$ for relation $r$. This reduces relation-embedding
 parameters. Basis decomposition is part of the general CompGCN method; the
-project configuration primarily controls embedding dimension, layer count,
+The project configuration primarily controls embedding dimension, layer count,
 dropout, and composition operator through PyKEEN.
 
 % Replace document/images/chapter5_compgcn_message_passing.pdf with the final
@@ -437,7 +437,7 @@ dropout, and composition operator through PyKEEN.
         }
     }
 }
-\caption{Relation-aware message passing in the CompGCN encoder}
+\caption{Relation-aware message passing in the CompGCN encoder.}
 \label{fig:compgcn_message_passing}
 \end{figure}
 

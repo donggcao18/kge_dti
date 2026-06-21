@@ -123,9 +123,9 @@ CompGCN-NFM         & \textbf{0.9689} & \textbf{0.9681} &
 CompGCN-NFM achieves the best average value for both metrics in both settings.
 On Yamanishi 1:1, it improves over DistMult-NFM by 0.0276 ROC-AUC and 0.0291
 PR-AUC. On Yamanishi 1:10, the corresponding gains are smaller but remain
-positive, at 0.0063 ROC-AUC and 0.0047 PR-AUC. These results indicate that both
-KGE encoders provide useful information beyond the descriptor-only baselines,
-while CompGCN supplies the strongest representation for the downstream NFM.
+positive, at 0.0063 ROC-AUC and 0.0047 PR-AUC. Both KGE encoders therefore add
+useful relational information beyond the descriptor-only baselines, while
+CompGCN provides the strongest representation for the downstream NFM.
 
 Among the classical models, Random Forest is the strongest baseline on
 Yamanishi 1:10, reaching 0.9486 ROC-AUC and 0.7743 PR-AUC. CompGCN-NFM improves
@@ -266,16 +266,16 @@ KGE-NFM models indicates better false-positive control under class imbalance.
 
 The tuning and ablation results lead to two additional observations. First,
 larger embeddings are not automatically beneficial; the 200-dimensional model
-outperforms the 400- and 600-dimensional alternatives. Second, the complete
-framework is not reducible to either KGE or NFM alone. Its best performance is
-obtained only when graph embeddings and biological descriptors are combined in
-the downstream interaction model.
+outperforms the 400- and 600-dimensional alternatives. Second, neither the
+standalone KGE scorer nor the descriptor-based NFM fully matches the complete
+pipeline. The strongest result is obtained when graph embeddings and biological
+descriptors are combined in the downstream interaction model.
 
 \section{Limitations}
 
 The reported results have several limitations. First, the summary CSV contains
 fold averages but not the fold-specific values required for confidence
-intervals or paired significance testing. These values will be presented in
+intervals or paired significance testing. These values can be presented in
 Figure~\ref{fig:fold_specific_candle_results} when the final candle chart is
 added. Second, the tuning experiments form a staged search rather than an
 exhaustive exploration of all parameter combinations. Third, unobserved

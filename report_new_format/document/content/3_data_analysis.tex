@@ -1,27 +1,21 @@
-\chapter{Data Analysis}
-\label{chap:data}
+% !TEX root = ../Report.tex
+\section{Data Analysis}
+\label{sec:data_analysis}
 
-\section{Dataset Overview}
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/data_analysis/dti_degree_distribution.png}
+    \caption{Degree distributions of drugs and targets in the Yamanishi08 DTI network. The log-scale counts show that most entities have few known interactions, while a small number of drugs and targets act as high-degree hubs.}
+    \Description{Two log-scale histograms showing known targets per drug and known drugs per target in the Yamanishi08 DTI network, with many low-degree entities and a few high-degree hubs.}
+    \label{fig:dti_degree_distribution}
+\end{figure*}
+The experiments use the Yamanishi08 benchmark for drug--target interaction prediction. The DTI network contains 5,127 known positive interactions between 791 drugs and 989 target proteins. These positives occupy only 0.6554\% of the 782,299 possible drug--target pairs, so the task is sparse at the interaction level. Unobserved pairs are sampled as negatives for training and evaluation, but they are not experimentally confirmed non-interactions.
 
-The experiments use the \textit{Yamanishi08} benchmark for drug--target
-interaction (DTI) prediction. The dataset represents known interactions as a
-bipartite graph whose two node sets are drugs and target proteins. Each
-observed edge denotes a known positive interaction, while the remaining
-drug--target pairs are unobserved. These unobserved pairs are used to sample
-negative training and test examples; they should not be interpreted as
-experimentally confirmed biological negatives.
-
-The dataset also provides 1024-dimensional Morgan fingerprints for drugs,
-147-dimensional CTD descriptors for proteins, and a biomedical knowledge graph
-used to construct entity embeddings. Since the main objective of this chapter
-is to characterize the DTI prediction problem, the analysis focuses on the
-interaction network and the two warm-start evaluation settings rather than on
-the individual descriptor distributions.
-
-\begin{table}[H]
+\begin{table}[t]
 \centering
-\caption{Overall statistics of the Yamanishi08 DTI network}
-\label{tab:yamanishi_dti_stats}
+\caption{Key statistics of the Yamanishi08 DTI data and auxiliary knowledge graph.}
+\label{tab:dataset_stats}
+\small
 \begin{tabular}{lr}
 \toprule
 \textbf{Statistic} & \textbf{Value} \\
@@ -30,141 +24,19 @@ Known positive interactions & 5,127 \\
 Unique drugs & 791 \\
 Unique target proteins & 989 \\
 Possible drug--target pairs & 782,299 \\
-Unobserved drug--target pairs & 777,172 \\
 Observed positive density & 0.6554\% \\
-Unobserved-pair sparsity & 99.3446\% \\
 Average targets per drug & 6.48 \\
 Average drugs per target & 5.18 \\
+Auxiliary KG triples & 95,579 \\
+Auxiliary KG entities & 25,487 \\
+Auxiliary KG relation types & 48 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The auxiliary knowledge graph contains 95,672 raw rows, corresponding to
-95,579 unique triples after removing 93 duplicates. It contains 25,487 entities
-and 48 relation types, and covers all 791 drugs and 989 targets in the DTI
-network. Thus, graph context is available for every entity evaluated in this
-project.
+Each drug is represented by a 1,024-dimensional Morgan fingerprint and each protein by a 147-dimensional CTD descriptor. The auxiliary knowledge graph covers all evaluated drugs and targets, providing 95,579 unique biomedical triples over 25,487 entities and 48 relation types. The warm-start protocol evaluates unseen drug--target pairs while keeping test drugs and proteins present in training.
 
-\section{Interaction Scarcity}
 
-Table~\ref{tab:yamanishi_dti_stats} shows that the DTI prediction space is
-extremely sparse. Only 5,127 of the 782,299 possible drug--target pairs are
-observed as positive, giving a density of 0.6554\%. Equivalently, 99.3446\% of
-the interaction matrix is unobserved. Consequently, the learning problem is
-defined by a small set of positive observations within a much larger candidate
-space.
+Figure~\ref{fig:dti_degree_distribution} shows that the interaction evidence is also long-tailed at the entity level. Most drugs and targets have only a few known interactions, while a small number of hubs have many. In the underlying statistics, 74.3\% of drugs have at most five known targets and 55.0\% of targets have at most two known drugs.
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{images/data_analysis/network_sparsity_summary.png}
-    \caption{Sparsity, low-degree prevalence, and hub concentration in the
-    Yamanishi08 DTI network.}
-    \label{fig:yamanishi_sparsity_summary}
-\end{figure}
-
-Figure~\ref{fig:yamanishi_sparsity_summary} summarizes three aspects of this
-scarcity. In addition to the low matrix density, most entities have little
-interaction evidence, while a relatively small group of hubs accounts for a
-large fraction of all observed edges. The dataset is therefore sparse both at
-the pair level and at the entity level.
-
-\section{Degree Distribution and Imbalance}
-
-The median degree is only two for both drugs and targets, although the maximum
-degrees reach 132 and 61, respectively. This gap indicates a strongly skewed
-degree distribution. In particular, 74.34\% of drugs have no more than five
-known targets, and 55.01\% of targets interact with no more than two drugs.
-
-\begin{table}[H]
-\centering
-\caption{Degree scarcity and concentration in the DTI network}
-\label{tab:yamanishi_degree_stats}
-\begin{tabular}{lrr}
-\toprule
-\textbf{Statistic} & \textbf{Drugs} & \textbf{Targets} \\
-\midrule
-Median degree & 2 & 2 \\
-Mean degree & 6.48 & 5.18 \\
-Maximum degree & 132 & 61 \\
-Low-degree entities & 588 ($\leq 5$) & 544 ($\leq 2$) \\
-Low-degree entity share & 74.34\% & 55.01\% \\
-Degree Gini coefficient & 0.669 & 0.568 \\
-Interactions held by top 10\% & 57.03\% & 41.49\% \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{images/data_analysis/dti_degree_distribution.png}
-    \caption{Drug and target degree distributions on a logarithmic count scale.}
-    \label{fig:yamanishi_degree_distribution}
-\end{figure}
-
-Figure~\ref{fig:yamanishi_degree_distribution} confirms that low-degree
-entities dominate both sides of the bipartite graph. The Gini coefficients in
-Table~\ref{tab:yamanishi_degree_stats} further quantify this imbalance. The
-top 10\% of drugs account for 57.03\% of all observed interactions, whereas the
-top 10\% of targets account for 41.49\%. Evaluation results may therefore be
-influenced disproportionately by well-connected entities, while predictions
-for low-degree entities remain supported by much less direct evidence.
-
-\section{Warm-Start Evaluation Settings}
-
-The experiments use two warm-start settings: 1:1 and 1:10. In both settings,
-the same positive interactions are retained, and every test drug and target
-also appears in the corresponding training data. The settings differ in the
-number of unobserved pairs sampled as negatives. The 1:1 setting is nearly
-balanced, whereas the 1:10 setting introduces approximately ten sampled
-negatives for each positive test pair.
-
-\begin{table}[H]
-\centering
-\caption{Mean composition of the warm-start splits}
-\label{tab:warm_start_comparison}
-\small
-\begin{tabular}{lrrrrr}
-\toprule
-\textbf{Setting} & \textbf{Train pos.} & \textbf{Train neg.} &
-\textbf{Test pos.} & \textbf{Test neg.} & \textbf{Neg.:pos.} \\
-\midrule
-Warm-start 1:1 & 4,615.0 & 4,549.1 & 512.0 & 510.9 & 0.998:1 \\
-Warm-start 1:10 & 4,615.0 & 40,249.2 & 512.0 & 5,026.9 & 9.818:1 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{images/data_analysis/warm_start_class_balance.png}
-    \caption{Mean positive and sampled-negative composition of the 1:1 and
-    1:10 warm-start settings.}
-    \label{fig:warm_start_class_balance}
-\end{figure}
-
-As shown in Table~\ref{tab:warm_start_comparison} and
-Figure~\ref{fig:warm_start_class_balance}, changing from 1:1 to 1:10 does not
-increase the amount of positive supervision. It only increases the number of
-sampled negative pairs, producing a more realistic but more imbalanced ranking
-problem. The 1:1 setting measures performance under balanced class exposure,
-whereas the 1:10 setting places greater emphasis on rejecting non-interacting
-candidates and therefore makes precision-oriented metrics more demanding.
-
-The data audit found no duplicate rows, no train--test pair overlap, and no
-sampled-negative pair that appears in the known-positive file. The ten supplied
-splits are treated as repeated warm-start holdouts rather than as a
-disjoint partition: together, their test sets contain 3,120 unique positive
-pairs, and some positive pairs occur in more than one test split. Experimental
-results are therefore summarized across the supplied splits, with fold-level
-variation reserved for the distributional plots.
-
-\section{Implications for the Prediction Task}
-
-The analysis establishes two central difficulties. First, positive DTI evidence
-is scarce: fewer than one percent of all candidate pairs are observed, and most
-drugs and targets have only a few known interactions. Second, the 1:10 setting
-substantially increases class imbalance without adding positive evidence. A
-successful model must therefore exploit information beyond direct interaction
-frequency and remain effective when positives are rare among candidate pairs.
-These properties motivate the use of knowledge graph embeddings together with
-the NFM prediction component introduced in Chapter~\ref{chap:methodology}.
+This structure motivates models that do not rely only on direct DTI frequency. KG embeddings can provide graph-derived context for low-degree drugs and targets, and CompGCN-style message passing can propagate information through typed biomedical relations before the downstream NFM combines graph, molecular, and sequence features.

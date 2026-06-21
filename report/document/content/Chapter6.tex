@@ -3,39 +3,63 @@
 
 \section{Conclusion}
 
-This project presents a machine learning pipeline for drug-target interaction
-prediction using knowledge graph embeddings and neural factorization machines.
-The pipeline learns biomedical entity embeddings from knowledge graph triples
-and combines them with drug and protein descriptor features for supervised
-interaction prediction.
+This report presented a KGE-NFM pipeline for drug--target interaction
+prediction on the Yamanishi08 benchmark. The method first learns fold-specific
+drug and protein representations from a biomedical knowledge graph, then
+combines these representations with Morgan fingerprints and protein CTD
+descriptors in an NFM classifier. DistMult and CompGCN were evaluated as
+alternative graph encoders under the same downstream prediction setting.
 
-% TODO: Replace this paragraph with your final conclusion after experiments.
-% Include the best-performing model, final ROC-AUC and PR-AUC values, and the
-% key observation from the result analysis.
+The experimental results show that adding knowledge graph representations
+improves over descriptor-only baselines, and that the relation-aware CompGCN
+encoder gives the strongest average performance. CompGCN-NFM obtains
+0.9689 ROC-AUC and 0.9681 PR-AUC on Yamanishi 1:1, and 0.9866 ROC-AUC and
+0.9362 PR-AUC on Yamanishi 1:10. These values are higher than the corresponding
+DistMult-NFM and classical descriptor-based baselines, with the PR-AUC gain on
+Yamanishi 1:10 being especially important because that setting contains many
+more sampled negatives per positive interaction.
+
+The tuning and ablation results further clarify why the complete framework is
+effective. A 200-dimensional CompGCN embedding with five negative samples and
+three message-passing layers gave the best tuned result. The ablation study
+showed that standalone KGE scoring is not sufficient, while NFM without dense
+KGE embeddings is substantially stronger but still below the full model. The
+best performance is therefore achieved by combining graph-derived context,
+molecular and sequence descriptors, and nonlinear feature interaction modeling.
 
 \section{Key Findings}
 
-% TODO: Fill this list after final evaluation.
-
 \begin{itemize}
-    \item KGE embeddings provide relational information from the biomedical
-    knowledge graph.
-    \item Descriptor features provide direct information about drug and protein
-    properties.
-    \item NFM can model feature interactions between drug, protein, and graph
-    representations.
+    \item The Yamanishi08 DTI matrix is highly sparse, with fewer than one
+    percent of all possible drug--target pairs observed as positives.
+
+    \item Knowledge graph embeddings provide useful relational information for
+    the downstream DTI classifier.
+
+    \item CompGCN improves over DistMult in the KGE-NFM pipeline, indicating that
+    relation-aware neighborhood aggregation is beneficial for this task.
+
+    \item PR-AUC is essential under the Yamanishi 1:10 setting because it exposes
+    false-positive control more clearly than ROC-AUC alone.
+
+    \item The ablation results show complementarity: descriptors, KGE embeddings,
+    and NFM feature interactions each contribute to the full model.
 \end{itemize}
 
 \section{Future Work}
 
-Possible future directions include:
+Several directions can strengthen the current study. First, the final report can
+incorporate fold-specific confidence intervals or paired significance tests once
+the complete fold-level prediction outputs are consolidated. Second, the same
+pipeline should be evaluated under drug-cold-start and protein-cold-start
+settings to measure generalization to unseen entities. Third, additional KGE
+models such as ComplEx, RotatE, and TransE could be compared under the same NFM
+prediction protocol.
 
-\begin{itemize}
-    \item evaluate additional KGE models such as TransE, ComplEx, and RotatE;
-    \item improve cold-start performance for unseen drugs and unseen proteins;
-    \item integrate molecular graph neural networks for drug representation;
-    \item integrate protein language models or sequence encoders;
-    \item perform more systematic hyperparameter search;
-    \item validate high-confidence predicted interactions using external
-    biomedical databases or literature.
-\end{itemize}
+Representation learning can also be extended beyond the current descriptor
+blocks. Molecular graph neural networks may provide richer drug representations
+than fixed Morgan fingerprints, while protein language models may capture
+sequence patterns not represented by CTD descriptors. Finally, high-confidence
+predictions should be validated against external biomedical databases or
+literature evidence before being interpreted as biologically actionable
+interactions.

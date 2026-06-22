@@ -1,17 +1,18 @@
 % !TEX root = ../Report.tex
-\section{Data Analysis}
-\label{sec:data_analysis}
-
-\begin{figure*}[t]
+\begin{figure*}[ht]
     \centering
     \includegraphics[width=0.9\textwidth]{images/data_analysis/dti_degree_distribution.png}
     \caption{Degree distributions of drugs and targets in the Yamanishi08 DTI network. The log-scale counts show that most entities have few known interactions, while a small number of drugs and targets act as high-degree hubs.}
     \Description{Two log-scale histograms showing known targets per drug and known drugs per target in the Yamanishi08 DTI network, with many low-degree entities and a few high-degree hubs.}
     \label{fig:dti_degree_distribution}
 \end{figure*}
+
+
+\section{Data Analysis}
+\label{sec:data_analysis}
 The experiments use the Yamanishi08 benchmark for drug--target interaction prediction. The DTI network contains 5,127 known positive interactions between 791 drugs and 989 target proteins. These positives occupy only 0.6554\% of the 782,299 possible drug--target pairs, so the task is sparse at the interaction level. Unobserved pairs are sampled as negatives for training and evaluation, but they are not experimentally confirmed non-interactions.
 
-\begin{table}[t]
+\begin{table}[b]
 \centering
 \caption{Key statistics of the Yamanishi08 DTI data and auxiliary knowledge graph.}
 \label{tab:dataset_stats}

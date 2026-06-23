@@ -2,7 +2,7 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-This paper presented a concise ACM-style version of a KGE-NFM study for DTI prediction. The pipeline learns fold-specific drug and protein embeddings from a biomedical KG, combines them with Morgan fingerprints and protein CTD descriptors, and predicts interactions with an NFM classifier. DistMult and CompGCN were evaluated as alternative graph encoders under the same downstream protocol.
+This report presented a KGE-NFM study for DTI prediction. The pipeline learns fold-specific drug and protein embeddings from a biomedical KG, combines them with Morgan fingerprints and protein CTD descriptors, and predicts interactions with an NFM classifier. DistMult and CompGCN were evaluated as alternative graph encoders under the same downstream protocol.
 
 The experimental results on Yamanishi08 show that KG-enhanced NFM models outperform descriptor-only baselines, and that CompGCN-NFM gives the strongest average performance. The model reaches 0.9689 ROC-AUC and 0.9681 PR-AUC on Yamanishi 1:1, and 0.9866 ROC-AUC and 0.9362 PR-AUC on Yamanishi 1:10. Ablation results further show that standalone graph scoring is insufficient, while the full model benefits from combining graph-derived embeddings with molecular and sequence descriptors.
 

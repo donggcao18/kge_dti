@@ -32,7 +32,7 @@ where $\mathcal{E}$ is the set of entities, $\mathcal{R}$ is the set of relation
 \end{equation}
 where $h,t\in\mathcal{E}$ are head and tail entities and $r\in\mathcal{R}$ is the relation type. Biomedical entities may include drugs, proteins, genes, diseases, pathways, side effects, biological processes, molecular functions, domains, and protein families. Relations may encode drug--target interactions, drug--disease associations, protein--protein interactions, pathway membership, functional annotations, and domain membership.
 
-Knowledge graph embedding (KGE) maps entities and relations into a continuous vector space. Representative KGE families include translational, bilinear, complex-valued, and rotation-based models such as TransE, DistMult, ComplEx, and RotatE \cite{bordes2013translating,yang2015embedding,trouillon2016complex,sun2019rotate}. A KGE model defines a scoring function
+Knowledge graph embedding (KGE) maps entities and relations into a continuous vector space. Representative KGE families include translational, bilinear, complex-valued, and rotation-based models such as TransE, DistMult, ComplEx, and RotatE \cite{bordes2013translating,YangYHGD14a,trouillon2016complex,sun2019rotate}. A KGE model defines a scoring function
 \begin{equation}
     f(h,r,t)
 \end{equation}
@@ -98,7 +98,7 @@ Knowledge graphs additionally assign each edge a type and direction. A direct mu
     \right),
     \label{eq:background_relational_gcn_update}
 \end{equation}
-where $\mathbf{W}_{r}^{k}$ transforms messages associated with relation $r$, $c_{v,r}$ is a normalization constant, and $\mathcal{N}(v)$ is the relational neighborhood of node $v$. Relation-specific matrices capture edge semantics but increase parameter count as the number of relations grows. Directed-GCN introduces inverse edges and direction-aware sharing \cite{marcheggiani2017encoding}, while R-GCN uses basis or block-diagonal decomposition to control parameters \cite{schlichtkrull2018modeling}. CompGCN instead composes entity and relation embeddings and uses direction-specific transformations \cite{vashishth2020composition}, which motivates its use as the stronger KG encoder in Section~\ref{sec:methodology}.
+where $\mathbf{W}_{r}^{k}$ transforms messages associated with relation $r$, $c_{v,r}$ is a normalization constant, and $\mathcal{N}(v)$ is the relational neighborhood of node $v$. Relation-specific matrices capture edge semantics but increase parameter count as the number of relations grows. Directed-GCN introduces inverse edges and direction-aware sharing \cite{MarcheggianiT17}, while R-GCN uses basis or block-diagonal decomposition to control parameters \cite{schlichtkrull2018modeling}. CompGCN instead composes entity and relation embeddings and uses direction-specific transformations \cite{VashishthSNT20}, which motivates its use as the stronger KG encoder in Section~\ref{sec:methodology}.
 
 \subsection{Existing DTI Prediction Approaches}
 
@@ -106,4 +106,4 @@ Descriptor-based methods formulate DTI prediction as supervised classification o
 
 Network-based methods use the topology of drug, protein, disease, pathway, and other biomedical networks. KG-based methods extend this idea by representing multiple entity and relation types in a unified graph and learning continuous representations that summarize relational compatibility and graph context \cite{luo2017network,wan2019neodti}. Their performance depends on graph coverage, negative sampling, relation modeling, and encoder expressiveness.
 
-Recommendation-based methods interpret drugs and proteins as two interacting entity groups, analogous to users and items. Factorization models learn latent interaction patterns, while neural recommendation models capture nonlinear relationships among heterogeneous feature groups \cite{rendle2010factorization}. The KGE-NFM framework combines KG-based and recommendation-based ideas \cite{ye2021unified}: KG embeddings provide relational biomedical representations, descriptor fields provide intrinsic drug and protein information, and NFM models feature interactions among these sources \cite{he2017neural}.
+Recommendation-based methods interpret drugs and proteins as two interacting entity groups, analogous to users and items. Factorization models learn latent interaction patterns, while neural recommendation models capture nonlinear relationships among heterogeneous feature groups \cite{rendle2010factorization}. The KGE-NFM framework combines KG-based and recommendation-based ideas \cite{ye2021unified}: KG embeddings provide relational biomedical representations, descriptor fields provide intrinsic drug and protein information, and NFM models feature interactions among these sources \cite{0001C17}.

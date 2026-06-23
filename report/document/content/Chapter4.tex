@@ -187,7 +187,7 @@ are fitted on training data and then applied to the test fold.
 \subsection{Entity and Relation Representations}
 
 DistMult assigns a vector to every entity and relation
-\cite{yang2015embedding}. For a triple $(h,r,t)$:
+\cite{YangYHGD14a}. For a triple $(h,r,t)$:
 
 \begin{equation}
     \mathbf{h},\mathbf{r},\mathbf{t}
@@ -256,7 +256,7 @@ an alternative encoder within the same KGE-NFM framework.
 \subsection{Graph Augmentation}
 
 CompGCN is a multi-relational graph convolutional encoder
-\cite{vashishth2020composition}. Unlike a standard GCN, it must account for
+\cite{VashishthSNT20}. Unlike a standard GCN, it must account for
 both the semantic type and direction of every edge.
 
 The standard update in Equation~\ref{eq:background_gcn_update} uses one shared
@@ -554,7 +554,7 @@ although the implemented NFM processes these inputs as separate feature fields.
 \subsection{Feature-Field Projection}
 
 The project uses a field-based NFM implementation derived from the NFM
-principle in \cite{he2017neural}. Each input field
+principle in \cite{0001C17}. Each input field
 $\mathbf{x}_{dp}^{(m)}\in\mathbb{R}^{D_m}$ is projected into a shared latent
 dimension:
 

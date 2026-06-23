@@ -55,7 +55,7 @@ Here, $\mathcal{T}_{support}$ denotes auxiliary biomedical context triples such 
 
 \subsection{DistMult Encoder}
 
-DistMult assigns a vector to each entity and relation \cite{yang2015embedding}. For a triple $(h,r,t)$,
+DistMult assigns a vector to each entity and relation \cite{YangYHGD14a}. For a triple $(h,r,t)$,
 \begin{equation}
     \mathbf{h},\mathbf{r},\mathbf{t}
     \in
@@ -89,7 +89,7 @@ This symmetry limits its ability to model asymmetric relations directly, althoug
 
 \subsection{CompGCN Encoder}
 
-CompGCN is a multi-relational graph convolutional encoder that jointly updates entity and relation representations \cite{vashishth2020composition}. For each original triple $(u,r,v)$, the graph is augmented with an inverse triple $(v,r^{-1},u)$ and self-loop relations. Original, inverse, and self-loop edges allow information to propagate with direction-aware semantics. At layer $k$, CompGCN maintains entity states $\mathbf{h}_{v}^{k}$ and relation states $\mathbf{h}_{r}^{k}$.
+CompGCN is a multi-relational graph convolutional encoder that jointly updates entity and relation representations \cite{VashishthSNT20}. For each original triple $(u,r,v)$, the graph is augmented with an inverse triple $(v,r^{-1},u)$ and self-loop relations. Original, inverse, and self-loop edges allow information to propagate with direction-aware semantics. At layer $k$, CompGCN maintains entity states $\mathbf{h}_{v}^{k}$ and relation states $\mathbf{h}_{r}^{k}$.
 
 Before aggregation, a neighboring entity representation is composed with the relation embedding:
 \begin{equation}
@@ -211,7 +211,7 @@ Thus, Figure~\ref{fig:kge_nfm_architecture} should be read as a conceptual fusio
 
 \subsection{Neural Factorization Machine}
 
-The downstream predictor is a field-based NFM derived from the NFM principle in \cite{he2017neural}. Each input field $\mathbf{x}_{dp}^{(m)}\in\mathbb{R}^{D_m}$ is projected into a shared latent dimension:
+The downstream predictor is a field-based NFM derived from the NFM principle in \cite{0001C17}. Each input field $\mathbf{x}_{dp}^{(m)}\in\mathbb{R}^{D_m}$ is projected into a shared latent dimension:
 \begin{equation}
     \mathbf{u}_{m}
     =

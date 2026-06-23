@@ -99,13 +99,13 @@ dense vector representations of entities and relations from graph triples of
 the form $(h,r,t)$, where $h$ is a head entity, $r$ is a relation type, and $t$
 is a tail entity. A simple model such as DistMult can efficiently learn entity
 and relation embeddings through a bilinear scoring function
-\cite{yang2015embedding}. However, DistMult has limited expressiveness because
+\cite{YangYHGD14a}. However, DistMult has limited expressiveness because
 its scoring function is symmetric and does not explicitly aggregate
 neighborhood structure.
 
 More expressive graph representation models, such as CompGCN, address part of
 this limitation by performing relation-aware message passing over
-multi-relational graphs \cite{vashishth2020composition}. This is especially
+multi-relational graphs \cite{VashishthSNT20}. This is especially
 relevant for biomedical data because a drug or protein is often better
 understood through its surrounding graph context rather than through isolated
 pairwise relations.
@@ -113,7 +113,7 @@ pairwise relations.
 After graph representations are obtained, the remaining challenge is how to use
 them effectively in the supervised prediction stage. Neural factorization
 machines are designed to model feature interactions in sparse predictive
-settings \cite{he2017neural}. This makes NFM a suitable candidate for combining
+settings \cite{0001C17}. This makes NFM a suitable candidate for combining
 drug identifiers, target identifiers, descriptor features, and graph-derived
 embeddings. In this project, the NFM component is used as the final classifier
 that learns interaction patterns from the constructed pair-level features.

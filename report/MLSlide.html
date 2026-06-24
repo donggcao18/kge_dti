@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slide Template - Minimal</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <style>
+    :root {
+      --hust-red: #C02034;
+      --hust-red-line: #C93245;
+      --hust-yellow: #FFC107;
+      --text-dark: #222222;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #1a1a1a;
+      font-family: 'Lato', sans-serif;
+      color: var(--text-dark);
+      overflow: hidden;
+    }
+
+    #viewport {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #stage {
+      width: 1440px;
+      height: 1080px;
+      position: relative;
+      transform-origin: center center;
+      flex-shrink: 0;
+    }
+
+
+
+    /* Cấu trúc Slide đơn giản */
+    .slide {
+      width: 1440px;
+      height: 1080px;
+      background-color: #ffffff;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: none;
+    }
+
+    .slide.active {
+      display: block;
+    }
+
+    /* Header vẽ tay giữ nguyên */
+    .slide-header {
+      width: 100%;
+      height: 110px;
+      background-color: var(--hust-red);
+      color: #ffffff;
+      padding-left: 40px;
+      padding-right: 40px;
+      font-weight: 700;
+      font-size: 42px;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      text-transform: uppercase;
+    }
+
+    .yellow-line {
+      width: 100%;
+      height: 4px;
+      background-color: var(--hust-yellow);
+    }
+
+    /* Nội dung trải phẳng 1 cột x n hàng */
+    .slide-content {
+      width: 100%;
+      height: calc(1080px - 110px - 4px - 80px);
+      padding: 60px 80px;
+      background-color: #ffffff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .section-heading {
+      text-transform: uppercase;
+    }
+
+    .content-row {
+      width: 100%;
+      display: block;
+    }
+
+    .slide-footer {
+      width: 100%;
+      height: 80px;
+      background-color: transparent;
+    }
+
+    /* Footer vẽ tay giữ nguyên */
+    .bottom-logo {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 320px;
+      height: auto;
+      display: block;
+      z-index: 5;
+    }
+
+    .bottom-red-line {
+      position: absolute;
+      bottom: 45px;
+      right: 40px;
+      width: 1040px;
+      height: 2px;
+      background-color: var(--hust-red-line);
+    }
+
+    /* Typography tối giản văn bản & danh sách phẳng */
+    .body-text {
+      font-size: 28px;
+      line-height: 1.6;
+      color: var(--text-dark);
+    }
+
+    .bullet-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .bullet-list li {
+      font-size: 28px;
+      line-height: 1.5;
+      padding-left: 36px;
+      position: relative;
+      color: var(--text-dark);
+    }
+
+    .bullet-list li::before {
+      content: "";
+      position: absolute;
+      left: 10px;
+      top: 14px;
+      width: 10px;
+      height: 10px;
+      background-color: var(--hust-red);
+      border-radius: 50%;
+    }
+
+    /* Công thức toán học phẳng */
+    .equation-block {
+      padding: 12px 0 12px 36px;
+      margin: 12px 0;
+      font-size: 28px;
+      position: relative;
+    }
+
+    .equation-block::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background-color: var(--hust-red);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="viewport">
+    <div id="stage">
+      <section class="slide"
+        style="width: 1440px; height: 1080px; overflow: hidden; display: flex; margin: 0; padding: 0; position: absolute; top: 0; left: 0;">
+
+        <div
+          style="width: 523.49px; height: 1080px; background-image: url('https://i.ibb.co/zWpsBFhX/Screenshot-2026-06-23-204625.png'); background-size: cover; background-position: center;">
+        </div>
+
+        <div
+          style="width: 916.51px; height: 1080px; display: flex; align-items: center; justify-content: center; background-color: #ffffff;">
+          <h1
+            style="font-family: 'Lato', sans-serif; font-size: 80px; color: #C00000; margin: 0; text-transform: uppercase; letter-spacing: 2px;">
+            INTRODUCTION
+          </h1>
+        </div>
+
+      </section>
+      <!-- SLIDE MẪU THEO ĐÚNG CẤU TRÚC ĐƠN GIẢN BẠN YÊU CẦU -->
+      <!-- Slide 1.1: Introduction -->
+      <section class="slide">
+  <header class="slide-header">Introduction: Mathematical Formulation &amp; Challenges</header>
+  <div class="yellow-line"></div>
+
+  <main class="slide-content" style="padding-top: 30px;">
+
+    <div class="config-block">
+      <h2 class="section-heading">DTI Prediction Formulation</h2>
+      <p class="body-text">
+        Given drug set \(\mathcal{D} = \{d_1, \dots, d_m\}\) and target set \(\mathcal{T} = \{t_1, \dots, t_n\}\),
+        given the interaction matrix: \(Y \in \{0, 1\}^{m \times n}\)
+      </p>
+
+      <p class="body-text" style="margin-top: 12px;">
+        <strong>Objective:</strong> Learn a mapping function \(f: \mathcal{D} \times \mathcal{T} \rightarrow [0, 1]\) to estimate:
+      </p>
+      <div class="equation-block" style="margin-top: 8px;">
+        $$\hat{y}_{ij} = P(y_{ij} = 1 \mid d_i, t_j)$$
+      </div>
+    </div>
+
+    <div class="config-block" style="margin-top: 25px;">
+      <h2 class="section-heading">Core Challenges</h2>
+      <ul class="bullet-list" style="line-height: 1.6;">
+        <li><strong>Extreme Sparsity:</strong> Matrix density \(\rho = \frac{|Y^+|}{m \times n} \approx 0.65\%\).</li>
+        <li><strong>Incomplete Supervision:</strong> Unobserved pairs \(y_{ij} = 0 \neq\) confirmed negatives.</li>
+        <li><strong>Heterogeneity:</strong> Fusing multi-scale context \((z_d, z_p)\) with structural descriptors \((s_d, s_p)\).</li>
+      </ul>
+    </div>
+
+  </main>
+
+  <footer class="slide-footer"></footer>
+  <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+  <div class="bottom-red-line"></div>
+</section>
+
+<section class="slide">
+  <header class="slide-header">Existing DTI Prediction Approaches</header>
+  <div class="yellow-line"></div>
+
+  <main class="slide-content" style="padding-top: 25px;">
+
+    <div class="config-block">
+      <h2 class="section-heading" style="margin-bottom: 15px;">Methodology Taxonomy</h2>
+      
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        
+        <div class="method-item">
+          <p class="body-text" style="margin: 0;">
+            <strong>1. Descriptor-based Methods:</strong> Supervised classification using intrinsic molecular/sequence features.
+          </p>
+          <div class="equation-block" style="margin: 6px 0;">
+            $$\hat{y}_{dp} = F(s_d, s_p)$$
+          </div>
+          <p class="body-text">
+            <span style="color: #c0392b;"><strong>Limitation:</strong></span> Ignores global topological relations between biomedical entities.
+          </p>
+        </div>
+
+        <div class="method-item">
+          <p class="body-text" style="margin: 0;">
+            <strong>2. Network &amp; KG-based Methods:</strong> Explores topology using Knowledge Graph Embeddings (KGE).
+          </p>
+          <div class="equation-block" style="margin: 6px 0;">
+            $$z_e = \text{KGE}(e, G), \quad \hat{y}_{dp} = F(z_d, z_p)$$
+          </div>
+          <p class="body-text">
+            <span style="color: #27ae60;"><strong>Benefit:</strong></span> Captures complex multi-scale relations (pathways, diseases) beyond DTI pairs.
+          </p>
+        </div>
+
+        <div class="method-item">
+          <p class="body-text" style="margin: 0;">
+            <strong>3. Hybrid / Proposed Approach (KGE-NFM):</strong> Jointly fuses relational graph context and structural descriptors.
+          </p>
+          <div class="equation-block" style="margin: 6px 0;">
+            $$\hat{y}_{dp} = \text{NFM}(z_d, z_p, s_d, s_p)$$
+          </div>
+          <p class="body-text">
+            <span style="color: #2980b9;"><strong>Synergy:</strong></span> Maximizes expressiveness via high-order non-linear feature interactions.
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="slide-footer"></footer>
+  <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+  <div class="bottom-red-line"></div>
+</section>
+
+      <!-- Slide 2.1. Biomedical Knowledge Graph Representation -->
+      <section class="slide">
+        <header class="slide-header">Biomedical Knowledge Graph Representation</header>
+        <div class="yellow-line"></div>
+
+        <main class="slide-content" style="padding-top: 25px;">
+
+          <div class="config-block">
+            <h2 class="section-heading">Graph Definition &amp; Structure</h2>
+            <p class="body-text">
+              Knowledge Graph \(\mathcal{G} = (\mathcal{E}, \mathcal{R}, \mathcal{T})\) with factual statement triples:
+              \((h, r, t) \in \mathcal{T}\) where \(h, t \in \mathcal{E}\), \(r \in \mathcal{R}\).
+            </p>
+          </div>
+
+          <div class="config-block" style="margin-top: 15px;">
+            <h2 class="section-heading">Knowledge Graph Embedding (KGE)</h2>
+            <p class="body-text">
+              Maps discrete entities/relations into continuous space \(\mathbb{R}^d\) using a scoring function to
+              maximize observed triple plausibility: \(f(h, r, t) \in \mathbb{R}\).
+            </p>
+          </div>
+
+          <div class="config-block" style="margin-top: 15px;">
+            <h2 class="section-heading">Triple Scoring &amp; Negative Sampling</h2>
+            <p class="body-text">
+              Negative instances \(\mathcal{T}^-\) generated via corruption: \((h, r, t) \rightarrow (h', r, t) \lor (h,
+              r, t')\). Learned via margin-based ranking loss:
+            </p>
+            <div class="equation-block" style="margin: 8px 0 !important;">
+              $$\mathcal{L}_{KGE} = \sum_{(h,r,t) \in \mathcal{T}^+} \sum_{(h',r,t') \in \mathcal{T}^-} \max\left(0,
+              \gamma + f(h', r, t') - f(h, r, t)\right)$$
+            </div>
+          </div>
+
+          <div class="config-block" style="margin-top: 15px;">
+            <h2 class="section-heading">Role in DTI Prediction</h2>
+            <p class="body-text">
+              Compresses multi-scale topological graph context into dense static vectors for downstream learning:
+            </p>
+            <div class="equation-block" style="margin: 8px 0 !important;">
+              $$\mathbf{z}_e = \text{KGE}(e \mid \mathcal{G}), \quad \mathbf{z}_e \in \mathbb{R}^{d_g}$$
+            </div>
+          </div>
+
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
+
+      <!-- SLIDE: GRAPH CONVOLUTIONAL NETWORKS (GCNS) -->
+      <section class="slide">
+        <header class="slide-header">Graph Convolutional Networks (GCNs)</header>
+        <div class="yellow-line"></div>
+
+        <main class="slide-content" style="padding-top: 20px;">
+
+          <!-- GCN ON UNDIRECTED GRAPHS -->
+          <div class="config-block">
+            <h2 class="section-heading">GCN on Undirected Graphs</h2>
+            <p class="body-text" style="margin-bottom: 5px;">
+              Updates node representations by aggregating normalized neighboring features via the propagation rule:
+            </p>
+            <div class="equation-block" style="margin: 5px 0 !important;">
+              $$H^{k+1} = \sigma \left( \hat{A}H^k W^k \right) \quad (2.9)$$
+            </div>
+            <p class="body-text" style="margin-top: 5px; margin-bottom: 5px;">
+              Where the symmetric normalized adjacency matrix \(\hat{A}\) captures structural self-connections:
+            </p>
+            <div class="equation-block" style="margin: 5px 0 !important;">
+              $$\hat{A} = \tilde{D}^{-1/2}(A + I)\tilde{D}^{-1/2}$$
+            </div>
+            <p class="body-text" style="margin-top: 5px; font-size: 18px; color: #555;">
+              \(A\): Adjacency matrix | \(I\): Identity matrix (self-connections) | \(\tilde{D}\): Degree matrix of \((A
+              + I)\)
+            </p>
+          </div>
+
+          <!-- GCN ON MULTI-RELATIONAL GRAPHS -->
+          <div class="config-block" style="margin-top: 15px;">
+            <h2 class="section-heading">GCN on Multi-Relational Graphs</h2>
+            <p class="body-text" style="margin-bottom: 5px;">
+              Knowledge Graphs introduce heterogeneous types and directions. Relational extensions require
+              relation-specific weight matrices \(W_r^k\):
+            </p>
+            <div class="equation-block" style="margin: 5px 0 !important;">
+              $$h_v^{k+1} = \sigma \left( \sum_{(u,r) \in N(v)} c_{v,r}^{-1} W_r^k h_u^k \right) \quad (2.10)$$
+            </div>
+            <p class="body-text" style="margin-top: 5px; font-size: 18px; color: #555;">
+              \(W_r^k\): Relation-specific transformation matrix | \(c_{v,r}\): Normalization constant
+            </p>
+          </div>
+
+          <!-- LIMITATIONS & EVOLUTION -->
+          <div class="config-block" style="margin-top: 15px;">
+            <h2 class="section-heading">Limitations &amp; Evolution</h2>
+            <ul class="bullet-list" style="margin: 0;">
+              <li style="margin-bottom: 4px;">
+                <strong>Parameter Explosion:</strong> Re-allocating an isolated \(W_r^k\) for each relation leads to
+                over-parameterization as the relation vocabulary size grows.
+              </li>
+              <li>
+                <strong>Motivation for CompGCN:</strong> Drives the design toward a framework that jointly composes
+                entity and relation embeddings to handle rich multi-relational data efficiently.
+              </li>
+            </ul>
+          </div>
+
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
+      <section class="slide">
+        <header class="slide-header">Data Analysis &amp; Benchmark</header>
+        <div class="yellow-line"></div>
+
+        <main class="slide-content" style="padding-top: 30px; box-sizing: border-box;">
+
+          <div class="config-block" style="margin-bottom: 20px;">
+            <h2 class="section-heading" style="margin: 0 0 8px 0;">Dataset &amp; Features</h2>
+            <ul class="bullet-list" style="margin: 0; padding-left: 20px;">
+              <li style="margin-bottom: 6px;"><strong>Benchmark:</strong> Yamanishi08 DTI network under a warm-start
+                protocol.</li>
+              <li style="margin-bottom: 6px;"><strong>Input Features:</strong> 1,024-d Morgan fingerprints (Drugs) &amp;
+                147-d CTD descriptors (Proteins).</li>
+              <li><strong>Sparsity &amp; Long-tail:</strong> Density = 0.6554%; 74.3% of drugs hold \(\le\) 5 known
+                targets.</li>
+            </ul>
+          </div>
+
+          <div class="config-block">
+            <table style="width: 100%; border-collapse: collapse; font-size: 19px; color: #000; line-height: 1.45;">
+              <thead>
+                <tr style="border-bottom: 2px solid #000; text-align: left; background-color: #f5f5f5;">
+                  <th style="padding: 8px 12px; font-weight: bold; width: 75%;">Statistic</th>
+                  <th style="padding: 8px 12px; font-weight: bold; width: 25%; text-align: right;">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom: 1px solid #ddd;">
+                  <td style="padding: 6px 12px;">Known positive interactions</td>
+                  <td style="padding: 6px 12px; text-align: right; font-weight: bold;">5,127</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #ddd;">
+                  <td style="padding: 6px 12px;">Unique drugs</td>
+                  <td style="padding: 6px 12px; text-align: right; font-weight: bold;">791</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #ddd;">
+                  <td style="padding: 6px 12px;">Unique target proteins</td>
+                  <td style="padding: 6px 12px; text-align: right; font-weight: bold;">989</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #ddd;">
+                  <td style="padding: 6px 12px;">Possible drug–target pairs</td>
+                  <td style="padding: 6px 12px; text-align: right; font-weight: bold;">782,299</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #000; background-color: #fff5f5;">
+                  <td style="padding: 6px 12px; font-weight: bold;">Observed positive density</td>
+                  <td style="padding: 6px 12px; text-align: right; font-weight: bold; color: #d9381e;">0.6554%</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #ddd;">
+                  <td style="padding: 6px 12px;">Average targets per drug</td>
+                  <td style="padding: 6px 12px; text-align: right; font-weight: bold;">6.48</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #000;">
+                  <td style="padding: 6px 12px;">Average drugs per target</td>
+                  <td style="padding: 6px 12px; text-align: right; font-weight: bold;">5.18</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #ddd; background-color: #f9f9f9;">
+                  <td style="padding: 6px 12px;">Auxiliary KG triples</td>
+                  <td style="padding: 6px 12px; text-align: right; font-weight: bold;">95,579</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #ddd; background-color: #f9f9f9;">
+                  <td style="padding: 6px 12px;">Auxiliary KG entities</td>
+                  <td style="padding: 6px 12px; text-align: right; font-weight: bold;">25,487</td>
+                </tr>
+                <tr style="border-bottom: 2px solid #000; background-color: #f9f9f9;">
+                  <td style="padding: 6px 12px;">Auxiliary KG relation types</td>
+                  <td style="padding: 6px 12px; text-align: right; font-weight: bold;">48</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h2 class="section-heading" style="text-align: center; margin: 12px 0 0 0;">
+              Table 1: Key statistics of the Yamanishi08 DTI data and auxiliary knowledge graph.
+            </h2>
+          </div>
+
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
+      <section class="slide">
+        <header class="slide-header">Degree Distribution &amp; Imbalance</header>
+        <div class="yellow-line"></div>
+
+        <main class="slide-content"
+          style="padding: 20px 80px !important; gap: 10px !important; box-sizing: border-box;">
+
+          <div class="config-block" style="margin: 0;">
+            <h2 class="section-heading" style="margin: 0 0 8px 0;">Network Concentration</h2>
+            <ul class="bullet-list" style="margin: 0; padding-left: 20px;">
+              <li style="margin-bottom: 6px;"><strong>Skewed Distribution:</strong> Median degree is only 2 for both
+                entities, while maximums reach 132 (drugs) and 61 (targets).</li>
+              <li style="margin-bottom: 6px;"><strong>High Imbalance:</strong> Top 10% of drugs hold 57.03% of all
+                observed interactions.</li>
+              <li><strong>Evidence Scarcity:</strong> Low-degree entities dominate the network, providing extremely
+                limited direct interaction history for training.</li>
+            </ul>
+          </div>
+
+          <div class="config-block" style="display: flex; flex-direction: column; align-items: center; margin: 0;">
+            <img src="https://i.ibb.co/k6ct5Y81/dti-degree-distribution.png" alt="dti degree distribution" border="0" style="max-height: 550px; width: auto; display: block; object-fit: contain; margin: 0;">
+
+            <h2 class="section-heading"
+              style="text-align: center; margin: -25px 0 0 0 !important; font-size: 20px; font-weight: bold; color: #000; line-height: 1.2; position: relative; z-index: 2;">
+              Figure 3.2: Drug and target degree distributions (Log-scale)
+            </h2>
+          </div>
+
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
+      <section class="slide">
+        <header class="slide-header">Framework Overview</header>
+        <div class="yellow-line"></div>
+
+        <main class="slide-content"
+          style="padding-top: 30px; display: flex !important; flex-direction: row !important; gap: 40px !important; align-items: stretch !important; box-sizing: border-box !important;">
+
+          <div
+            style="width: 38% !important; min-width: 38% !important; display: block !important; box-sizing: border-box !important;">
+
+            <div style="margin-bottom: 20px !important;">
+              <h2 class="section-heading" style="margin: 0 0 8px 0;">STAGE 1: KGE</h2>
+              <p class="body-text" style="margin: 0 !important;">
+                Input multi-relational graph \(\mathcal{G}\). Encoder generates dense knowledge graph embeddings:
+              </p>
+              <p class="body-text" style="margin: 6px 0 !important; text-align: center !important;">
+                $$\mathbf{X}_{KGE} \in \mathbb{R}^{|E| \times d_g}$$
+              </p>
+            </div>
+
+            <div style="margin-bottom: 20px !important;">
+              <h2 class="section-heading" style="margin: 0 0 8px 0;">FEATURE FUSION</h2>
+              <p class="body-text" style="margin: 0 !important;">
+                Concatenate learned KGE embeddings with static physicochemical features to generate the aggregate input
+                vector:
+              </p>
+              <p class="body-text" style="margin: 6px 0 !important; text-align: center !important;">
+                $$\mathbf{x}_{input} \in \mathbb{R}^{d_{total}}$$
+              </p>
+            </div>
+
+            <div style="margin-bottom: 0 !important;">
+              <h2 class="section-heading" style="margin: 0 0 8px 0;">STAGE 2: NFM</h2>
+              <p class="body-text" style="margin: 0 !important;">
+                Model pairwise features and cross-field interactions \(v_i \odot v_j\) via deep neural networks,
+                outputting the final predicted probability:
+              </p>
+              <p class="body-text" style="margin: 6px 0 !important; text-align: center !important;">
+                $$\hat{y}_{ij} \in [0, 1]$$
+              </p>
+            </div>
+
+          </div>
+
+          <div
+            style="width: 58% !important; min-width: 58% !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; box-sizing: border-box !important;">
+
+            <img src="https://i.ibb.co/LzKDkHQ1/chapter5-overall-architecture.png" alt="Framework Overall Architecture"
+        style="width: 100% !important; height: auto !important; max-height: none !important; object-fit: contain !important; margin-bottom: 12px !important;">
+
+            <h2 class="section-heading"
+              style="text-align: center; margin: 0 !important; font-size: 20px; font-weight: bold; color: #000; line-height: 1.2; text-transform: none !important;">
+              Figure 4.1: KGE-NFM framework with alternative DistMult and CompGCN encoders
+            </h2>
+
+          </div>
+
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
+      <section class="slide">
+        <header class="slide-header">DistMult Encoder</header>
+        <div class="yellow-line"></div>
+
+        <main class="slide-content" style="padding-top: 30px; box-sizing: border-box;">
+
+          <div class="config-block">
+            <h2 class="section-heading">Entity &amp; Relation Representations</h2>
+            <p class="body-text">
+              Assigns a \(k\)-dimensional continuous vector to each individual entity and relation via direct embedding
+              matrix lookup: \(\mathbf{h}, \mathbf{r}, \mathbf{t} \in \mathbb{R}^k\).
+
+            </p>
+            <p class="body-text">No explicit multi-hop neighborhood structural aggregation is performed at this level.
+            </p>
+          </div>
+
+          <div class="config-block" style="margin-top: 25px;">
+            <h2 class="section-heading">DistMult Scoring Function</h2>
+            <p class="body-text" style="margin-bottom: 12px;">
+              Measures triple plausibility utilizing a highly efficient diagonal bilinear interaction framework:
+            </p>
+            <div class="equation-block" style="margin: 15px 0 !important; font-size: 26px !important;">
+              $$f_{DM}(h, r, t) = \mathbf{h}^\top \text{diag}(\mathbf{r})\mathbf{t} = \sum_{i=1}^{k} h_i r_i t_i$$
+            </div>
+
+          </div>
+
+          <div class="config-block" style="margin-top: 25px;">
+            <h2 class="section-heading">KGE Training Objective</h2>
+            <p class="body-text">
+              Optimized via the Margin Ranking Loss by substituting \(f_{DM}\) into the core objective, leveraging Adam
+              and negative cross-corruption sampling to enforce:
+            </p>
+            <div class="equation-block" style="margin: 12px 0 !important; font-size: 22px !important;">
+              $$f_{DM}(h, r, t)_{\text{positive}} &gt; f_{DM}(h', r, t')_{\text{negative}}$$
+            </div>
+          </div>
+
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
+
+      <section class="slide">
+        <header class="slide-header">DistMult: Extraction &amp; Limitations</header>
+        <div class="yellow-line"></div>
+
+        <main class="slide-content" style="padding-top: 30px; box-sizing: border-box;">
+
+          <div class="config-block">
+            <h2 class="section-heading">Embedding Extraction</h2>
+            <p class="body-text" style="margin-bottom: 10px;">
+              Retrieves relational context vectors directly from the learned entity table \(\mathbf{E}\) to feed the NFM
+              layer:
+            </p>
+            <div class="equation-block" style="margin: 12px 0 !important; font-size: 24px !important;">
+              $$\mathbf{z}_d^{DM} = \mathbf{E}[d], \quad \mathbf{z}_p^{DM} = \mathbf{E}[p]$$
+            </div>
+          </div>
+
+          <div class="config-block" style="margin-top: 25px;">
+            <h2 class="section-heading">Structural Limitations</h2>
+            <ul class="bullet-list" style="margin: 0; padding-left: 20px;">
+              <li style="margin-bottom: 12px;">
+                <strong>Symmetry Constraint:</strong> Forced to treat directional biomedical relations as identical:
+                <div class="equation-block" style="margin: 15px 0 !important; font-size: 24px !important;">
+                  $$f_{DM}(h, r, t) = f_{DM}(t, r, h)$$
+                </div>
+              </li>
+              <li>
+                <strong>Neighborhood Ignorance:</strong> Scores isolated triples without multi-hop structural
+                aggregation.
+              </li>
+            </ul>
+          </div>
+
+          <div class="config-block" style="margin-top: 25px;">
+            <h2 class="section-heading">Motivation for CompGCN</h2>
+            <p class="body-text">
+              These flaws necessitate **CompGCN** to effectively handle asymmetric biological paths and integrate
+              relational neighborhood evidence via message passing.
+            </p>
+          </div>
+
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
+
+      <section class="slide">
+        <header class="slide-header">CompGCN Encoder: Augmentation &amp; Composition</header>
+        <div class="yellow-line"></div>
+
+        <main class="slide-content" style="padding-top: 40px; display: flex; gap: 50px; align-items: flex-start;">
+
+          <div class="config-block" style="flex: 1;">
+            <h2 class="section-heading">Multi-Relational Graph Augmentation</h2>
+            <p class="body-text" style="margin-bottom: 12px;">
+              Unlike standard GCNs, CompGCN accounts for both semantic types and edge directions by enriching the graph
+              with inverse relations and self-loops:
+            </p>
+            <ul class="bullet-list">
+              <li><strong>Original Relation:</strong> \((u, r, v)\)</li>
+              <li><strong>Inverse Relation:</strong> \((v, r^{-1}, u)\)</li>
+              <li><strong>Self-loop Relation:</strong> \((u, \top, u)\) for every entity</li>
+            </ul>
+          </div>
+
+          <div class="config-block" style="flex: 1;">
+            <h2 class="section-heading">Entity-Relation Composition (\(\phi\))</h2>
+            <p class="body-text" style="margin-bottom: 12px;">
+              Neighbor entity representations are composed with their connecting relation embeddings before neighborhood
+              aggregation:
+            </p>
+            <div class="equation-block">
+              $$m_{u,r}^k = \phi(h_u^k, h_r^k) \quad (4.12)$$
+            </div>
+            <p class="body-text" style="margin-top: 15px; margin-bottom: 12px;">
+              <strong>Selected Operator:</strong> Element-wise multiplication (\(\odot\)), which effectively applies a
+              relation-dependent feature gating mechanism:
+            </p>
+            <div class="equation-block">
+              $$\phi(h_u^k, h_r^k) = h_u^k \odot h_r^k \quad (4.16)$$
+            </div>
+          </div>
+
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
+
+      <section class="slide">
+        <header class="slide-header">CompGCN Encoder: Relation-Aware Message Passing</header>
+        <div class="yellow-line"></div>
+
+        <main class="slide-content"
+          style="padding-top: 35px; display: flex; flex-direction: column; justify-content: flex-start; gap: 5px !important; height: calc(100% - 120px); box-sizing: border-box;">
+
+          <div style="display: flex; gap: 50px; align-items: flex-start; width: 100%;">
+            <div class="config-block" style="flex: 1;">
+              <h2 class="section-heading">Node Representation Update</h2>
+              <p class="body-text" style="margin-bottom: 12px;">
+                Aggregates composed messages using direction-specific matrices \(W_{\lambda(r)}^k\) (Original, Inverse,
+                Self-loop):
+              </p>
+              <div class="equation-block" style="margin: 0!important; padding: 3 !important;">
+                $$h_v^{k+1} = \sigma \left( \sum_{(u,r) \in N(v)} W_{\lambda(r)}^k \phi(h_u^k, h_r^k) \right) \quad
+                (4.17)$$
+              </div>
+            </div>
+
+            <div class="config-block" style="flex: 1;">
+              <h2 class="section-heading">Relation Update &amp; Benefit</h2>
+              <p class="body-text" style="margin-bottom: 12px;">
+                Relation embeddings evolve alongside entities to maintain alignment in the vector space:
+              </p>
+              <div class="equation-block" style="margin: 0 !important; padding: 3 !important;">
+                $$h_r^{k+1} = W_{rel}^k h_r^k \quad (4.19)$$
+              </div>
+            </div>
+          </div>
+
+          <p class="body-text" style="margin-top: 5px !important; width: 100%;">
+            Where \(W_{\lambda(r)}^k\) is selected according to edge direction, and \(\sigma\) is a nonlinear
+            activation. The direction function is defined as:
+            <strong>\(\lambda(r) \in \{O, I, S\} \quad (4.18)\)</strong>
+          </p>
+
+          <div class="image-container"
+            style="width: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; margin-top: 0px !important; gap: 10px;">
+
+            <img src="https://i.ibb.co/HDXQMHQW/chapter5-compgcn-message-passing.png"
+        alt="CompGCN Message Passing Architecture"
+        style="width: auto; height: auto; max-height: 400px; object-fit: contain;">
+
+            <h2 class="section-heading">
+              Figure 3: CompGCN message passing.
+            </h2>
+
+          </div>
+
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
+      <section class="slide">
+        <header class="slide-header">Drug-Target Feature Construction</header>
+        <div class="yellow-line"></div>
+
+        <main class="slide-content" style="padding-top: 25px; box-sizing: border-box;">
+
+          <div class="config-block">
+            <h2 class="section-heading">Multimodal Feature Field Set</h2>
+            <p class="body-text" style="margin-bottom: 10px;">
+              Candidate pairs are mapped into four distinct feature fields to capture both network topology and chemical
+              signatures:
+            </p>
+
+            <div class="equation-block" style="margin: 20px 0 !important; font-size: 28px !important;">
+              $$F_{dp} = \{ \underbrace{z_d, z_p}_{\text{Relational Context}}, \underbrace{s_d, s_p}_{\text{Intrinsic
+              Structure}} \} \quad (4.23)$$
+            </div>
+
+
+          </div>
+
+          <div class="config-block" style="margin-top: 25px;">
+            <h2 class="section-heading">Unified Pair Representation</h2>
+            <p class="body-text" style="margin-bottom: 10px;">
+              Features are fused via concatenation (\(\parallel\)) into a hybrid vector to ensure joint
+              relational-structural synergy:
+            </p>
+            <div class="equation-block" style="margin: 15px 0 !important; font-size: 28px !important;">
+              $$\mathbf{x}_{dp} = [z_d \parallel z_p \parallel s_d \parallel s_p] \quad (4.24)$$
+            </div>
+
+            <ul class="bullet-list" style="margin-top: 15px; padding-left: 20px;">
+              <li style="margin-bottom: 8px;">
+                <strong>\([z_d, z_p] \in \mathbb{R}^k\):</strong> KG embeddings for global network positions.
+              </li>
+              <li style="margin-bottom: 8px;">
+                <strong>\(s_d \in \mathbb{R}^{1024}\):</strong> Morgan fingerprints for local molecular structures.
+              </li>
+              <li>
+                <strong>\(s_p \in \mathbb{R}^{147}\):</strong> CTD descriptors for protein sequence properties.
+              </li>
+            </ul>
+          </div>
+
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
+      <section class="slide">
+  <header class="slide-header">Neural Factorization Machine: Interaction &amp; Projection</header>
+  <div class="yellow-line"></div>
+
+  <main class="slide-content" style="padding-top: 25px; box-sizing: border-box;">
+
+    <div class="config-block">
+      <h2 class="section-heading">Field-Based Projection</h2>
+      <p class="body-text">
+        Projects input fields into a shared latent space:
+      </p>
+      <div class="equation-block" style="margin-top: 8px;">
+        $$u_m = P_m x^{(m)}_{dp} + b_m \quad (4.25)$$
+      </div>
+    </div>
+
+    <div class="config-block" style="margin-top: 25px;">
+      <h2 class="section-heading">Bi-Interaction Pooling</h2>
+      <p class="body-text">
+        Captures pairwise non-linear interactions between relational context and structural descriptors:
+      </p>
+      <div class="equation-block" style="margin-top: 8px;">
+        $$f_{BI} = \frac{1}{2} \left[ \left( \sum_{m=1}^M u_m \right)^2 - \sum_{m=1}^M u_m^2 \right] \quad (4.26)$$
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="slide-footer"></footer>
+  <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+  <div class="bottom-red-line"></div>
+</section>
+<section class="slide">
+  <header class="slide-header">Neural Factorization Machine: Deep Prediction Layers</header>
+  <div class="yellow-line"></div>
+
+  <main class="slide-content" style="padding-top: 5px; box-sizing: border-box;">
+
+    <div class="config-block" style="margin-top: 10px;">
+      <h2 class="section-heading">Deep Hidden Layers (MLP)</h2>
+      <p class="body-text">
+        The interaction vector \(f_{BI}\) is processed through non-linear layers to learn high-order DTI patterns:
+      </p>
+      <div class="equation-block" style="margin-top: 5px;">
+        $$a^{(l+1)} = \text{ReLU} \left( W^{(l)} a^{(l)} + b^{(l)} \right) \quad (4.27)$$
+      </div>
+    </div>
+
+    <div class="config-block" style="margin-top: 15px;">
+      <h2 class="section-heading">Final DTI Prediction</h2>
+      <p class="body-text">
+        Combines linear field terms with the non-linear interaction output to compute the final interaction probability \(\hat{y}_{dp} = \sigma(o_{dp}) \quad (4.29)\):
+      </p>
+      <div class="equation-block" style="margin-top: 5px;">
+        $$o_{dp} = \sum_{m=1}^M (a_m^\top x_{dp}^{(m)} + c_m) + \text{MLP}(f_{BI}) \quad (4.28)$$
+      </div>
+    </div>
+
+    <div class="config-block" style="margin-top: 15px;">
+      <h2 class="section-heading">Binary Classification Objective (BCO)</h2>
+      <p class="body-text">
+        Optimized via Binary Cross-Entropy loss using the estimated probabilities against true interaction labels:
+      </p>
+      <div class="equation-block" style="margin-top: 5px;">
+        $$\mathcal{L}_{DTI} = -\frac{1}{N} \sum_{i=1}^N \left[ y_i \log(\hat{y}_i) + (1-y_i) \log(1-\hat{y}_i) \right] \quad (4.30)$$
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="slide-footer" style="padding-bottom: 5px;"></footer>
+  <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+  <div class="bottom-red-line"></div>
+</section>
+      <section class="slide">
+        <header class="slide-header">Experimental Setup, Baselines &amp; Metrics</header>
+        <div class="yellow-line"></div>
+
+        <main class="slide-content"
+          style="padding-top: 25px; display: flex !important; flex-direction: row !important; gap: 4% !important; align-items: stretch !important; box-sizing: border-box !important; width: 100% !important;">
+
+          <div
+            style="flex: 1 1 0px !important; width: 48% !important; max-width: 48% !important; display: flex !important; flex-direction: column !important; justify-content: space-between !important; box-sizing: border-box !important;">
+            <div>
+              <h2 class="section-heading" style="margin: 0 0 8px 0;">Experimental Configuration</h2>
+              <ul class="bullet-list" style="margin: 0 0 15px 0; padding-left: 20px;">
+                <li style="margin-bottom: 6px;"><strong>Benchmarks:</strong> Yamanishi08 DTI under 1:1 and 1:10
+                  settings.</li>
+                <li style="margin-bottom: 6px;"><strong>Protocol:</strong> 10-fold cross-validation (warm-start
+                  setting).</li>
+                <li style="margin-bottom: 0;"><strong>Feature Prep:</strong> Protein CTD descriptors reduced to 100 PCA
+                  components.</li>
+              </ul>
+            </div>
+
+
+          </div>
+
+          <div
+            style="flex: 1 1 0px !important; width: 48% !important; max-width: 48% !important; border-left: 1px solid #e0e0e0 !important; padding-left: 4% !important; display: flex !important; flex-direction: column !important; justify-content: flex-start !important; box-sizing: border-box !important;">
+
+            <div style="margin-bottom: 25px !important;">
+              <h2 class="section-heading" style="margin: 0 0 8px 0;">Compared Baselines</h2>
+              <ul class="bullet-list" style="margin: 0; padding-left: 20px;">
+                <li style="margin-bottom: 6px;">
+                  <strong>Descriptor-only:</strong> Logistic Regression (Linear) | Random Forest &amp; XGBoost
+                  (Non-linear).
+                </li>
+                <li style="margin-bottom: 0;">
+                  <strong>KGE-NFM Variants:</strong> DistMult-NFM (Bilinear) vs. <strong>CompGCN-NFM</strong>
+                  (Proposed).
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h2 class="section-heading" style="margin: 0 0 8px 0;">Evaluation Metrics</h2>
+              <ul class="bullet-list" style="margin: 0; padding-left: 20px;">
+                <li style="margin-bottom: 6px;">
+                  <strong>ROC-AUC:</strong> Measures global ranking discrimination across thresholds.
+                </li>
+                <li style="margin-bottom: 0;">
+                  <strong>PR-AUC:</strong> Evaluates precision-recall balance; critical for the highly imbalanced 1:10
+                  setting.
+                </li>
+              </ul>
+            </div>
+
+          </div>
+
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
+<section class="slide">
+  <header class="slide-header">Main Results: DTI Prediction Performance</header>
+  <div class="yellow-line"></div>
+
+  <main class="slide-content" style="padding-top: 25px; box-sizing: border-box;">
+
+    <div class="config-block" style="margin-bottom: 20px;">
+      <h2 class="section-heading">Evaluation Overview</h2>
+      <ul class="bullet-list" style="margin: 0; padding-left: 20px; font-size: 19px;">
+        <li style="margin-bottom: 4px;"><strong>Protocol:</strong> 10-fold cross-validation (Warm-start).</li>
+        <li style="margin-bottom: 4px;"><strong>Objective:</strong> Compare descriptor-only baselines vs. KG-enhanced NFM variants under balanced (1:1) and imbalanced (1:10) settings.</li>
+      </ul>
+    </div>
+
+    <div class="config-block" style="text-align: center;">
+      <h2 class="section-heading" style="margin: 0 0 15px 0; font-size: 30px; font-weight: 700; color: var(--text-dark); text-align: left;">
+        Table 2: Average DTI prediction performance on Yamanishi08 warm-start settings
+      </h2>
+      <img src="https://i.ibb.co/HpFPf5sZ/Screenshot-2026-06-24-164507.png" 
+           alt="Table 2: DTI prediction performance" 
+           style="width: 100%; max-width: 1050px; height: auto; display: block; margin: 0 auto; border: none;">
+    </div>
+
+  </main>
+
+  <footer class="slide-footer"></footer>
+  <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+  <div class="bottom-red-line"></div>
+</section>
+
+<section class="slide">
+  <header class="slide-header">CompGCN Hyperparameter Tuning</header>
+  <div class="yellow-line"></div>
+
+  <main class="slide-content" style="padding-top: 25px; box-sizing: border-box;">
+
+    <div class="config-block" style="margin-bottom: 25px;">
+      <h2 class="section-heading">Optimization Strategy</h2>
+      <ul class="bullet-list" style="margin: 0; padding-left: 20px; font-size: 19px;">
+        <li style="margin-bottom: 6px;"><strong>Target:</strong> Staged tuning on the Yamanishi 1:10 imbalanced setting.</li>
+        <li><strong>Search Space:</strong> Explored embedding dimensions, negative sampling counts, and depth of GCN message-passing layers.</li>
+      </ul>
+    </div>
+
+    <div class="config-block" style="text-align: center;">
+      <h2 class="section-heading" style="margin-bottom: 15px; font-size: 30px; text-align: left;">
+        Table 3: CompGCN hyperparameter tuning results (1:10 setting)
+      </h2>
+      <img src="https://i.ibb.co/27mZZpKq/Screenshot-2026-06-24-164459.png" 
+           alt="Table 3: Hyperparameter tuning" 
+           style="width: 100%; max-width: 1050px; height: auto; display: block; margin: 0 auto; border: none;">
+    </div>
+
+  </main>
+
+  <footer class="slide-footer"></footer>
+  <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+  <div class="bottom-red-line"></div>
+</section>
+
+<section class="slide">
+  <header class="slide-header">Ablation Study: Component Contribution</header>
+  <div class="yellow-line"></div>
+
+  <main class="slide-content" style="padding-top: 30px; box-sizing: border-box;">
+
+    <div class="config-block" style="margin-bottom: 25px;">
+      <h2 class="section-heading" style="margin: 0 0 6px 0; font-size: 20px; font-weight: 700; color: var(--text-dark);">Analysis Objective</h2>
+      <ul class="bullet-list" style="margin: 0; padding-left: 20px; font-size: 19px; line-height: 1.4;">
+        <li><strong>Target:</strong> Evaluate the impact of Knowledge Graph (KG) scoring, descriptor-based prediction, and multimodal fusion on the Yamanishi 1:10 setting.</li>
+      </ul>
+    </div>
+
+    <div class="config-block" style="text-align: center;">
+      <h2 class="section-heading" style="margin: 0 0 15px 0; font-size: 30px; font-weight: 700; color: var(--text-dark); text-align: left;">
+        Table 4: Ablation results on Yamanishi 1:10
+      </h2>
+      <img src="https://i.ibb.co/mCjZbz5x/Screenshot-2026-06-24-164453.png" 
+           alt="Table 4: Ablation study results" 
+           style="width: 100%; max-width: 1050px; height: auto; display: block; margin: 0 auto; border: none;">
+    </div>
+
+  </main>
+
+  <footer class="slide-footer"></footer>
+  <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+  <div class="bottom-red-line"></div>
+</section>
+
+<section class="slide">
+  <header class="slide-header">Conclusion &amp; Future Work</header>
+  <div class="yellow-line"></div>
+
+  <main class="slide-content" style="padding-top: 5px; box-sizing: border-box;">
+    <div style="display: flex; gap: 15px; margin-top: 15px; align-items: stretch; height: calc(100% - 40px);">
+      
+      <div class="config-block" style="flex: 1; background-color: #f4f7fa; border-top: 4px solid #2980b9; padding: 12px; border-radius: 4px;">
+        <h2 class="section-heading" style="color: #2980b9; margin-bottom: 10px; font-size: 20px; display: flex; align-items: center; gap: 6px;">
+          <span>✔️</span> Conclusion
+        </h2>
+        <ul class="bullet-list" style="margin: 0; padding-left: 15px; font-size: 16.5px; line-height: 1.4;">
+          <li style="margin-bottom: 8px;"><strong>Framework:</strong> Developed KGE-NFM pipeline successfully integrating KG context with biochemical descriptors.</li>
+          <li style="margin-bottom: 8px;"><strong>Performance:</strong> CompGCN-NFM achieved SOTA on 1:10 imbalanced setting: <strong style="color: #b30000;">0.9866 ROC-AUC</strong> and <strong style="color: #b30000;">0.9362 PR-AUC</strong>.</li>
+          <li><strong>Synergy:</strong> Relational and structural features provide complementary data; standalone graph completion is insufficient.</li>
+        </ul>
+      </div>
+
+      <div class="config-block" style="flex: 1; background-color: #fffbf4; border-top: 4px solid #e67e22; padding: 12px; border-radius: 4px;">
+        <h2 class="section-heading" style="color: #e67e22; margin-bottom: 10px; font-size: 20px; display: flex; align-items: center; gap: 6px;">
+          <span>💡</span> Key Findings
+        </h2>
+        <ul class="bullet-list" style="margin: 0; padding-left: 15px; font-size: 16.5px; line-height: 1.4;">
+          <li style="margin-bottom: 12px;"><strong>KG Embeddings:</strong> Effectively summarize global relational evidence (pathways, diseases, functions) for entities.</li>
+          <li><strong>NFM Expressiveness:</strong> Successfully captures high-order nonlinear interactions between heterogeneous feature fields.</li>
+        </ul>
+      </div>
+
+      <div class="config-block" style="flex: 1; background-color: #f5faf6; border-top: 4px solid #27ae60; padding: 12px; border-radius: 4px;">
+        <h2 class="section-heading" style="color: #27ae60; margin-bottom: 10px; font-size: 20px; display: flex; align-items: center; gap: 6px;">
+          <span>🚀</span> Future Work
+        </h2>
+        <ul class="bullet-list" style="margin: 0; padding-left: 15px; font-size: 16.5px; line-height: 1.4;">
+          <li style="margin-bottom: 6px;"><strong>Cold-Start Evaluation:</strong> Testing generalization on entirely unseen drugs/proteins.</li>
+          <li style="margin-bottom: 6px;"><strong>Representation Enrichment:</strong> Integrating molecular GNNs and Protein Language Models (PLMs).</li>
+          <li style="margin-bottom: 6px;"><strong>Encoder Expansion:</strong> Comparing ComplEx, RotatE, and TransE under the same protocol.</li>
+          <li><strong>Biological Validation:</strong> Verifying high-confidence predictions via external databases/literature.</li>
+        </ul>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="slide-footer"></footer>
+  <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+  <div class="bottom-red-line"></div>
+</section>
+    </div>
+  </div>
+
+
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+      const totalSlides = slides.length;
+      let currentSlide = totalSlides - 1;
+  
+      function showSlide(index) {
+        slides.forEach((s, i) => s.classList.toggle('active', i === index));
+        if (window.MathJax) MathJax.typesetPromise();
+
+      }
+  
+      function autoScale() {
+        const scale = Math.min(window.innerWidth / 1440, window.innerHeight / 1080);
+        document.getElementById('stage').style.transform = 'scale(' + scale + ')';
+      }
+  
+      document.addEventListener('keydown', (e) => {
+        if ((e.key === 'ArrowRight' || e.key === ' ')){
+          if (currentSlide < totalSlides - 1) {
+            showSlide(++currentSlide);
+          }
+          else {
+            currentSlide = 0;
+            showSlide(0);
+          }
+        }
+        if (e.key === 'ArrowLeft' && currentSlide > 0) {
+          showSlide(--currentSlide);
+        }
+      });
+  
+      window.addEventListener('DOMContentLoaded', () => { showSlide(currentSlide); autoScale(); });
+      window.addEventListener('resize', autoScale);
+  </script>
+
+</body>
+
+</html>

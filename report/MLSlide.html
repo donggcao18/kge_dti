@@ -192,117 +192,149 @@
 
   <div id="viewport">
     <div id="stage">
-      <section class="slide"
-        style="width: 1440px; height: 1080px; overflow: hidden; display: flex; margin: 0; padding: 0; position: absolute; top: 0; left: 0;">
-
-        <div
-          style="width: 523.49px; height: 1080px; background-image: url('https://i.ibb.co/zWpsBFhX/Screenshot-2026-06-23-204625.png'); background-size: cover; background-position: center;">
-        </div>
-
-        <div
-          style="width: 916.51px; height: 1080px; display: flex; align-items: center; justify-content: center; background-color: #ffffff;">
-          <h1
-            style="font-family: 'Lato', sans-serif; font-size: 80px; color: #C00000; margin: 0; text-transform: uppercase; letter-spacing: 2px;">
-            INTRODUCTION
-          </h1>
-        </div>
-
+      <section class="slide">
+        <img src="https://i.ibb.co/WNZZ20q8/Screenshot-2026-06-25-000308.png" alt="Cover Slide" style="width: 100%; height: 100%; display: block;">
       </section>
+
+      <!-- Chapter 1 Divider -->
+      <section class="slide">
+        <div style="display: flex; width: 100%; height: 100%;">
+          <div
+            style="width: 523.49px; height: 1080px; background-image: url('https://i.ibb.co/zWpsBFhX/Screenshot-2026-06-23-204625.png'); background-size: cover; background-position: center;">
+          </div>
+
+          <div
+            style="width: 916.51px; height: 1080px; display: flex; align-items: center; justify-content: center; background-color: #ffffff;">
+            <h1
+              style="font-family: 'Lato', sans-serif; font-size: 80px; color: #C00000; margin: 0; text-transform: uppercase; letter-spacing: 2px;">
+              INTRODUCTION
+            </h1>
+          </div>
+        </div>
+      </section>
+
       <!-- SLIDE MẪU THEO ĐÚNG CẤU TRÚC ĐƠN GIẢN BẠN YÊU CẦU -->
       <!-- Slide 1.1: Introduction -->
       <section class="slide">
-  <header class="slide-header">Introduction: Mathematical Formulation &amp; Challenges</header>
-  <div class="yellow-line"></div>
+        <header class="slide-header">Introduction: Mathematical Formulation &amp; Challenges</header>
+        <div class="yellow-line"></div>
 
-  <main class="slide-content" style="padding-top: 30px;">
+        <main class="slide-content" style="padding-top: 30px;">
 
-    <div class="config-block">
-      <h2 class="section-heading">DTI Prediction Formulation</h2>
-      <p class="body-text">
-        Given drug set \(\mathcal{D} = \{d_1, \dots, d_m\}\) and target set \(\mathcal{T} = \{t_1, \dots, t_n\}\),
-        given the interaction matrix: \(Y \in \{0, 1\}^{m \times n}\)
-      </p>
+          <div class="config-block">
+            <h2 class="section-heading">DTI Prediction Formulation</h2>
+            <p class="body-text">
+              Given drug set \(\mathcal{D} = \{d_1, \dots, d_m\}\) and target set \(\mathcal{T} = \{t_1, \dots, t_n\}\),
+              given the interaction matrix: \(Y \in \{0, 1\}^{m \times n}\)
+            </p>
 
-      <p class="body-text" style="margin-top: 12px;">
-        <strong>Objective:</strong> Learn a mapping function \(f: \mathcal{D} \times \mathcal{T} \rightarrow [0, 1]\) to estimate:
-      </p>
-      <div class="equation-block" style="margin-top: 8px;">
-        $$\hat{y}_{ij} = P(y_{ij} = 1 \mid d_i, t_j)$$
-      </div>
-    </div>
-
-    <div class="config-block" style="margin-top: 25px;">
-      <h2 class="section-heading">Core Challenges</h2>
-      <ul class="bullet-list" style="line-height: 1.6;">
-        <li><strong>Extreme Sparsity:</strong> Matrix density \(\rho = \frac{|Y^+|}{m \times n} \approx 0.65\%\).</li>
-        <li><strong>Incomplete Supervision:</strong> Unobserved pairs \(y_{ij} = 0 \neq\) confirmed negatives.</li>
-        <li><strong>Heterogeneity:</strong> Fusing multi-scale context \((z_d, z_p)\) with structural descriptors \((s_d, s_p)\).</li>
-      </ul>
-    </div>
-
-  </main>
-
-  <footer class="slide-footer"></footer>
-  <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
-  <div class="bottom-red-line"></div>
-</section>
-
-<section class="slide">
-  <header class="slide-header">Existing DTI Prediction Approaches</header>
-  <div class="yellow-line"></div>
-
-  <main class="slide-content" style="padding-top: 25px;">
-
-    <div class="config-block">
-      <h2 class="section-heading" style="margin-bottom: 15px;">Methodology Taxonomy</h2>
-      
-      <div style="display: flex; flex-direction: column; gap: 20px;">
-        
-        <div class="method-item">
-          <p class="body-text" style="margin: 0;">
-            <strong>1. Descriptor-based Methods:</strong> Supervised classification using intrinsic molecular/sequence features.
-          </p>
-          <div class="equation-block" style="margin: 6px 0;">
-            $$\hat{y}_{dp} = F(s_d, s_p)$$
+            <p class="body-text" style="margin-top: 12px;">
+              <strong>Objective:</strong> Learn a mapping function \(f: \mathcal{D} \times \mathcal{T} \rightarrow [0,
+              1]\) to estimate:
+            </p>
+            <div class="equation-block" style="margin-top: 8px;">
+              $$\hat{y}_{ij} = P(y_{ij} = 1 \mid d_i, t_j)$$
+            </div>
           </div>
-          <p class="body-text">
-            <span style="color: #c0392b;"><strong>Limitation:</strong></span> Ignores global topological relations between biomedical entities.
-          </p>
-        </div>
 
-        <div class="method-item">
-          <p class="body-text" style="margin: 0;">
-            <strong>2. Network &amp; KG-based Methods:</strong> Explores topology using Knowledge Graph Embeddings (KGE).
-          </p>
-          <div class="equation-block" style="margin: 6px 0;">
-            $$z_e = \text{KGE}(e, G), \quad \hat{y}_{dp} = F(z_d, z_p)$$
+          <div class="config-block" style="margin-top: 25px;">
+            <h2 class="section-heading">Core Challenges</h2>
+            <ul class="bullet-list" style="line-height: 1.6;">
+              <li><strong>Extreme Sparsity:</strong> Matrix density \(\rho = \frac{|Y^+|}{m \times n} \approx 0.65\%\).
+              </li>
+              <li><strong>Incomplete Supervision:</strong> Unobserved pairs \(y_{ij} = 0 \neq\) confirmed negatives.
+              </li>
+              <li><strong>Heterogeneity:</strong> Fusing multi-scale context \((z_d, z_p)\) with structural descriptors
+                \((s_d, s_p)\).</li>
+            </ul>
           </div>
-          <p class="body-text">
-            <span style="color: #27ae60;"><strong>Benefit:</strong></span> Captures complex multi-scale relations (pathways, diseases) beyond DTI pairs.
-          </p>
-        </div>
 
-        <div class="method-item">
-          <p class="body-text" style="margin: 0;">
-            <strong>3. Hybrid / Proposed Approach (KGE-NFM):</strong> Jointly fuses relational graph context and structural descriptors.
-          </p>
-          <div class="equation-block" style="margin: 6px 0;">
-            $$\hat{y}_{dp} = \text{NFM}(z_d, z_p, s_d, s_p)$$
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
+
+      <!-- Chapter 2 Divider -->
+      <section class="slide">
+        <div style="display: flex; width: 100%; height: 100%;">
+          <div
+            style="width: 523.49px; height: 1080px; background-image: url('https://i.ibb.co/zWpsBFhX/Screenshot-2026-06-23-204625.png'); background-size: cover; background-position: center;">
           </div>
-          <p class="body-text">
-            <span style="color: #2980b9;"><strong>Synergy:</strong></span> Maximizes expressiveness via high-order non-linear feature interactions.
-          </p>
+
+          <div
+            style="width: 916.51px; height: 1080px; display: flex; align-items: center; justify-content: center; background-color: #ffffff; padding: 40px; box-sizing: border-box;">
+            <h1
+              style="font-family: 'Lato', sans-serif; font-size: 80px; color: #C00000; margin: 0; text-transform: uppercase; letter-spacing: 2px; text-align: center; line-height: 1.2;">
+              BACKGROUND AND RELATED WORK
+            </h1>
+          </div>
         </div>
+      </section>
 
-      </div>
-    </div>
+      <section class="slide">
+        <header class="slide-header">Existing DTI Prediction Approaches</header>
+        <div class="yellow-line"></div>
 
-  </main>
+        <main class="slide-content" style="padding-top: 25px;">
 
-  <footer class="slide-footer"></footer>
-  <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
-  <div class="bottom-red-line"></div>
-</section>
+          <div class="config-block">
+            <h2 class="section-heading" style="margin-bottom: 15px;">Methodology Taxonomy</h2>
+
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+
+              <div class="method-item">
+                <p class="body-text" style="margin: 0;">
+                  <strong>1. Descriptor-based Methods:</strong> Supervised classification using intrinsic
+                  molecular/sequence features.
+                </p>
+                <div class="equation-block" style="margin: 6px 0;">
+                  $$\hat{y}_{dp} = F(s_d, s_p)$$
+                </div>
+                <p class="body-text">
+                  <span style="color: #c0392b;"><strong>Limitation:</strong></span> Ignores global topological relations
+                  between biomedical entities.
+                </p>
+              </div>
+
+              <div class="method-item">
+                <p class="body-text" style="margin: 0;">
+                  <strong>2. Network &amp; KG-based Methods:</strong> Explores topology using Knowledge Graph Embeddings
+                  (KGE).
+                </p>
+                <div class="equation-block" style="margin: 6px 0;">
+                  $$z_e = \text{KGE}(e, G), \quad \hat{y}_{dp} = F(z_d, z_p)$$
+                </div>
+                <p class="body-text">
+                  <span style="color: #27ae60;"><strong>Benefit:</strong></span> Captures complex multi-scale relations
+                  (pathways, diseases) beyond DTI pairs.
+                </p>
+              </div>
+
+              <div class="method-item">
+                <p class="body-text" style="margin: 0;">
+                  <strong>3. Hybrid / Proposed Approach (KGE-NFM):</strong> Jointly fuses relational graph context and
+                  structural descriptors.
+                </p>
+                <div class="equation-block" style="margin: 6px 0;">
+                  $$\hat{y}_{dp} = \text{NFM}(z_d, z_p, s_d, s_p)$$
+                </div>
+                <p class="body-text">
+                  <span style="color: #2980b9;"><strong>Synergy:</strong></span> Maximizes expressiveness via high-order
+                  non-linear feature interactions.
+                </p>
+              </div>
+
+            </div>
+          </div>
+
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
 
       <!-- Slide 2.1. Biomedical Knowledge Graph Representation -->
       <section class="slide">
@@ -356,62 +388,42 @@
         <div class="bottom-red-line"></div>
       </section>
 
-      <!-- SLIDE: GRAPH CONVOLUTIONAL NETWORKS (GCNS) -->
-      <section class="slide">
-        <header class="slide-header">Graph Convolutional Networks (GCNs)</header>
+      <section class="slide"
+        style="width: 1440px; height: 1080px; position: absolute; top: 0; left: 0; background: #ffffff;">
+        <header class="slide-header">Graph Convolutional Networks: Undirected Graphs</header>
         <div class="yellow-line"></div>
 
-        <main class="slide-content" style="padding-top: 20px;">
+        <main class="slide-content" style="padding-top: 30px;">
 
-          <!-- GCN ON UNDIRECTED GRAPHS -->
           <div class="config-block">
-            <h2 class="section-heading">GCN on Undirected Graphs</h2>
-            <p class="body-text" style="margin-bottom: 5px;">
-              Updates node representations by aggregating normalized neighboring features via the propagation rule:
-            </p>
-            <div class="equation-block" style="margin: 5px 0 !important;">
-              $$H^{k+1} = \sigma \left( \hat{A}H^k W^k \right) \quad (2.9)$$
-            </div>
-            <p class="body-text" style="margin-top: 5px; margin-bottom: 5px;">
-              Where the symmetric normalized adjacency matrix \(\hat{A}\) captures structural self-connections:
-            </p>
-            <div class="equation-block" style="margin: 5px 0 !important;">
-              $$\hat{A} = \tilde{D}^{-1/2}(A + I)\tilde{D}^{-1/2}$$
-            </div>
-            <p class="body-text" style="margin-top: 5px; font-size: 18px; color: #555;">
-              \(A\): Adjacency matrix | \(I\): Identity matrix (self-connections) | \(\tilde{D}\): Degree matrix of \((A
-              + I)\)
+            <h2 class="section-heading" style="color: #C02034; margin-bottom: 15px;">Standard GCN Mechanism</h2>
+            <p class="body-text">
+              Updates node representations by iteratively aggregating normalized features from local graph
+              neighborhoods.
             </p>
           </div>
 
-          <!-- GCN ON MULTI-RELATIONAL GRAPHS -->
-          <div class="config-block" style="margin-top: 15px;">
-            <h2 class="section-heading">GCN on Multi-Relational Graphs</h2>
-            <p class="body-text" style="margin-bottom: 5px;">
-              Knowledge Graphs introduce heterogeneous types and directions. Relational extensions require
-              relation-specific weight matrices \(W_r^k\):
-            </p>
-            <div class="equation-block" style="margin: 5px 0 !important;">
-              $$h_v^{k+1} = \sigma \left( \sum_{(u,r) \in N(v)} c_{v,r}^{-1} W_r^k h_u^k \right) \quad (2.10)$$
+          <div class="config-block" style="margin-top: 25px;">
+            <h2 class="section-heading" style="color: #C02034; margin-bottom: 10px;">The Update Rule</h2>
+            <div class="equation-block"
+              style="background: #f9f9f9; padding: 20px; border-radius: 10px; font-size: 32px;">
+              $$H^{(k+1)} = \sigma\left( \hat{A} H^{(k)} W^{(k)} \right), \quad H^{(0)} = X \quad (2.9)$$
             </div>
-            <p class="body-text" style="margin-top: 5px; font-size: 18px; color: #555;">
-              \(W_r^k\): Relation-specific transformation matrix | \(c_{v,r}\): Normalization constant
-            </p>
-          </div>
 
-          <!-- LIMITATIONS & EVOLUTION -->
-          <div class="config-block" style="margin-top: 15px;">
-            <h2 class="section-heading">Limitations &amp; Evolution</h2>
-            <ul class="bullet-list" style="margin: 0;">
-              <li style="margin-bottom: 4px;">
-                <strong>Parameter Explosion:</strong> Re-allocating an isolated \(W_r^k\) for each relation leads to
-                over-parameterization as the relation vocabulary size grows.
-              </li>
-              <li>
-                <strong>Motivation for CompGCN:</strong> Drives the design toward a framework that jointly composes
-                entity and relation embeddings to handle rich multi-relational data efficiently.
-              </li>
+            <ul class="bullet-list" style="margin-top: 15px;">
+              <li><strong>\(\hat{A} = \tilde{D}^{-1/2} (A + I) \tilde{D}^{-1/2}\):</strong> Normalized adjacency matrix
+                (with self-connections).</li>
+              <li><strong>\(W^{(k)}\):</strong> Layer-specific learnable weight matrix.</li>
+              <li><strong>\(\sigma\):</strong> Non-linear activation (e.g., ReLU).</li>
             </ul>
+          </div>
+
+          <div class="config-block"">
+      <h2 class=" section-heading" style="margin-bottom: 5px;">Key Insight</h2>
+            <p class="body-text">
+              Stacking <strong>\(L\) layers</strong> enables each node to capture and integrate topological information
+              from multi-hop neighborhoods.
+            </p>
           </div>
 
         </main>
@@ -420,13 +432,85 @@
         <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
         <div class="bottom-red-line"></div>
       </section>
+
+      <section class="slide"
+        style="width: 1440px; height: 1080px; position: absolute; top: 0; left: 0; background: #ffffff;">
+        <header class="slide-header">Graph Convolutional Networks: Multi-Relational Graphs</header>
+        <div class="yellow-line"></div>
+
+        <main class="slide-content" style="padding-top: 30px;">
+
+          <div class="config-block">
+            <h2 class="section-heading" style="color: #C02034; margin-bottom: 12px;">The Challenge of Relational Data
+            </h2>
+            <p class="body-text">
+              Biomedical Knowledge Graphs assign specific types and semantic directions to edges. Standard GCNs cannot
+              distinguish between these unique relational contexts.
+            </p>
+          </div>
+
+          <div class="config-block" style="margin-top: 15px;">
+            <h2 class="section-heading" style="color: #C02034; margin-bottom: 10px;">Multi-Relational Update Rule</h2>
+            <div class="equation-block"
+              style="background: #f9f9f9; padding: 20px; border-radius: 10px; font-size: 32px;">
+              $$h_v^{k+1} = \sigma \left( \sum_{(u,r) \in \mathcal{N}(v)} c_{v,r}^{-1} W_r^k h_u^k \right) \quad
+              (2.10)$$
+            </div>
+
+            <p class="body-text" style="margin-top: 15px;">
+              <strong>Critical Limitation:</strong> \(W_r^k\) relies on relation-specific transformations. The parameter
+              count grows linearly with the number of relations, leading to catastrophic <strong>overfitting</strong> on
+              large vocabularies.
+            </p>
+          </div>
+
+          <div class="config-block" style="margin-top: 15px;">
+            <h2 class="section-heading" style="color: #C02034; margin-bottom: 12px;">Advanced Scaling Architectures</h2>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <p class="body-text" style="margin: 0; line-height: 1.4;">
+                <strong>Directed-GCN:</strong> Introduces inverse edges and direction-aware parameter sharing.
+              </p>
+              <p class="body-text" style="margin: 0; line-height: 1.4;">
+                <strong>R-GCN:</strong> Utilizes basis or block-diagonal decomposition to parameterize relation weights.
+              </p>
+              <p class="body-text" style="margin: 0; line-height: 1.4">
+                <strong>CompGCN (Motivation):</strong> Leverages joint entity-relation composition to scale efficiently
+                across massive relation sets (detailed in Methodology).
+              </p>
+            </div>
+          </div>
+
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
+
+      <!-- Chapter 3 Divider -->
+      <section class="slide">
+        <div style="display: flex; width: 100%; height: 100%;">
+          <div
+            style="width: 523.49px; height: 1080px; background-image: url('https://i.ibb.co/zWpsBFhX/Screenshot-2026-06-23-204625.png'); background-size: cover; background-position: center;">
+          </div>
+
+          <div
+            style="width: 916.51px; height: 1080px; display: flex; align-items: center; justify-content: center; background-color: #ffffff; padding: 40px; box-sizing: border-box;">
+            <h1
+              style="font-family: 'Lato', sans-serif; font-size: 80px; color: #C00000; margin: 0; text-transform: uppercase; letter-spacing: 2px; text-align: center; line-height: 1.2;">
+              DATA ANALYSIS
+            </h1>
+          </div>
+        </div>
+      </section>
+
       <section class="slide">
         <header class="slide-header">Data Analysis &amp; Benchmark</header>
         <div class="yellow-line"></div>
 
         <main class="slide-content" style="padding-top: 30px; box-sizing: border-box;">
 
-          <div class="config-block" style="margin-bottom: 20px;">
+          <div class="config-block" style="margin-bottom: 10px;">
             <h2 class="section-heading" style="margin: 0 0 8px 0;">Dataset &amp; Features</h2>
             <ul class="bullet-list" style="margin: 0; padding-left: 20px;">
               <li style="margin-bottom: 6px;"><strong>Benchmark:</strong> Yamanishi08 DTI network under a warm-start
@@ -439,7 +523,7 @@
           </div>
 
           <div class="config-block">
-            <table style="width: 100%; border-collapse: collapse; font-size: 19px; color: #000; line-height: 1.45;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 25px; color: #000; line-height: 1.45;">
               <thead>
                 <tr style="border-bottom: 2px solid #000; text-align: left; background-color: #f5f5f5;">
                   <th style="padding: 8px 12px; font-weight: bold; width: 75%;">Statistic</th>
@@ -521,7 +605,8 @@
           </div>
 
           <div class="config-block" style="display: flex; flex-direction: column; align-items: center; margin: 0;">
-            <img src="https://i.ibb.co/k6ct5Y81/dti-degree-distribution.png" alt="dti degree distribution" border="0" style="max-height: 550px; width: auto; display: block; object-fit: contain; margin: 0;">
+            <img src="https://i.ibb.co/k6ct5Y81/dti-degree-distribution.png" alt="dti degree distribution" border="0"
+              style="max-height: 550px; width: auto; display: block; object-fit: contain; margin: 0;">
 
             <h2 class="section-heading"
               style="text-align: center; margin: -25px 0 0 0 !important; font-size: 20px; font-weight: bold; color: #000; line-height: 1.2; position: relative; z-index: 2;">
@@ -535,6 +620,24 @@
         <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
         <div class="bottom-red-line"></div>
       </section>
+
+      <!-- Chapter 4 Divider -->
+      <section class="slide">
+        <div style="display: flex; width: 100%; height: 100%;">
+          <div
+            style="width: 523.49px; height: 1080px; background-image: url('https://i.ibb.co/zWpsBFhX/Screenshot-2026-06-23-204625.png'); background-size: cover; background-position: center;">
+          </div>
+
+          <div
+            style="width: 916.51px; height: 1080px; display: flex; align-items: center; justify-content: center; background-color: #ffffff; padding: 40px; box-sizing: border-box;">
+            <h1
+              style="font-family: 'Lato', sans-serif; font-size: 80px; color: #C00000; margin: 0; text-transform: uppercase; letter-spacing: 2px; text-align: center; line-height: 1.2;">
+              METHODOLOGY
+            </h1>
+          </div>
+        </div>
+      </section>
+
       <section class="slide">
         <header class="slide-header">Framework Overview</header>
         <div class="yellow-line"></div>
@@ -583,7 +686,7 @@
             style="width: 58% !important; min-width: 58% !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; box-sizing: border-box !important;">
 
             <img src="https://i.ibb.co/LzKDkHQ1/chapter5-overall-architecture.png" alt="Framework Overall Architecture"
-        style="width: 100% !important; height: auto !important; max-height: none !important; object-fit: contain !important; margin-bottom: 12px !important;">
+              style="width: 100% !important; height: auto !important; max-height: none !important; object-fit: contain !important; margin-bottom: 12px !important;">
 
             <h2 class="section-heading"
               style="text-align: center; margin: 0 !important; font-size: 20px; font-weight: bold; color: #000; line-height: 1.2; text-transform: none !important;">
@@ -777,8 +880,8 @@
             style="width: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; margin-top: 0px !important; gap: 10px;">
 
             <img src="https://i.ibb.co/HDXQMHQW/chapter5-compgcn-message-passing.png"
-        alt="CompGCN Message Passing Architecture"
-        style="width: auto; height: auto; max-height: 400px; object-fit: contain;">
+              alt="CompGCN Message Passing Architecture"
+              style="width: auto; height: auto; max-height: 400px; object-fit: contain;">
 
             <h2 class="section-heading">
               Figure 3: CompGCN message passing.
@@ -843,133 +946,30 @@
         <div class="bottom-red-line"></div>
       </section>
       <section class="slide">
-  <header class="slide-header">Neural Factorization Machine: Interaction &amp; Projection</header>
-  <div class="yellow-line"></div>
-
-  <main class="slide-content" style="padding-top: 25px; box-sizing: border-box;">
-
-    <div class="config-block">
-      <h2 class="section-heading">Field-Based Projection</h2>
-      <p class="body-text">
-        Projects input fields into a shared latent space:
-      </p>
-      <div class="equation-block" style="margin-top: 8px;">
-        $$u_m = P_m x^{(m)}_{dp} + b_m \quad (4.25)$$
-      </div>
-    </div>
-
-    <div class="config-block" style="margin-top: 25px;">
-      <h2 class="section-heading">Bi-Interaction Pooling</h2>
-      <p class="body-text">
-        Captures pairwise non-linear interactions between relational context and structural descriptors:
-      </p>
-      <div class="equation-block" style="margin-top: 8px;">
-        $$f_{BI} = \frac{1}{2} \left[ \left( \sum_{m=1}^M u_m \right)^2 - \sum_{m=1}^M u_m^2 \right] \quad (4.26)$$
-      </div>
-    </div>
-
-  </main>
-
-  <footer class="slide-footer"></footer>
-  <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
-  <div class="bottom-red-line"></div>
-</section>
-<section class="slide">
-  <header class="slide-header">Neural Factorization Machine: Deep Prediction Layers</header>
-  <div class="yellow-line"></div>
-
-  <main class="slide-content" style="padding-top: 5px; box-sizing: border-box;">
-
-    <div class="config-block" style="margin-top: 10px;">
-      <h2 class="section-heading">Deep Hidden Layers (MLP)</h2>
-      <p class="body-text">
-        The interaction vector \(f_{BI}\) is processed through non-linear layers to learn high-order DTI patterns:
-      </p>
-      <div class="equation-block" style="margin-top: 5px;">
-        $$a^{(l+1)} = \text{ReLU} \left( W^{(l)} a^{(l)} + b^{(l)} \right) \quad (4.27)$$
-      </div>
-    </div>
-
-    <div class="config-block" style="margin-top: 15px;">
-      <h2 class="section-heading">Final DTI Prediction</h2>
-      <p class="body-text">
-        Combines linear field terms with the non-linear interaction output to compute the final interaction probability \(\hat{y}_{dp} = \sigma(o_{dp}) \quad (4.29)\):
-      </p>
-      <div class="equation-block" style="margin-top: 5px;">
-        $$o_{dp} = \sum_{m=1}^M (a_m^\top x_{dp}^{(m)} + c_m) + \text{MLP}(f_{BI}) \quad (4.28)$$
-      </div>
-    </div>
-
-    <div class="config-block" style="margin-top: 15px;">
-      <h2 class="section-heading">Binary Classification Objective (BCO)</h2>
-      <p class="body-text">
-        Optimized via Binary Cross-Entropy loss using the estimated probabilities against true interaction labels:
-      </p>
-      <div class="equation-block" style="margin-top: 5px;">
-        $$\mathcal{L}_{DTI} = -\frac{1}{N} \sum_{i=1}^N \left[ y_i \log(\hat{y}_i) + (1-y_i) \log(1-\hat{y}_i) \right] \quad (4.30)$$
-      </div>
-    </div>
-
-  </main>
-
-  <footer class="slide-footer" style="padding-bottom: 5px;"></footer>
-  <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
-  <div class="bottom-red-line"></div>
-</section>
-      <section class="slide">
-        <header class="slide-header">Experimental Setup, Baselines &amp; Metrics</header>
+        <header class="slide-header">Neural Factorization Machine: Interaction &amp; Projection</header>
         <div class="yellow-line"></div>
 
-        <main class="slide-content"
-          style="padding-top: 25px; display: flex !important; flex-direction: row !important; gap: 4% !important; align-items: stretch !important; box-sizing: border-box !important; width: 100% !important;">
+        <main class="slide-content" style="padding-top: 25px; box-sizing: border-box;">
 
-          <div
-            style="flex: 1 1 0px !important; width: 48% !important; max-width: 48% !important; display: flex !important; flex-direction: column !important; justify-content: space-between !important; box-sizing: border-box !important;">
-            <div>
-              <h2 class="section-heading" style="margin: 0 0 8px 0;">Experimental Configuration</h2>
-              <ul class="bullet-list" style="margin: 0 0 15px 0; padding-left: 20px;">
-                <li style="margin-bottom: 6px;"><strong>Benchmarks:</strong> Yamanishi08 DTI under 1:1 and 1:10
-                  settings.</li>
-                <li style="margin-bottom: 6px;"><strong>Protocol:</strong> 10-fold cross-validation (warm-start
-                  setting).</li>
-                <li style="margin-bottom: 0;"><strong>Feature Prep:</strong> Protein CTD descriptors reduced to 100 PCA
-                  components.</li>
-              </ul>
+          <div class="config-block">
+            <h2 class="section-heading">Field-Based Projection</h2>
+            <p class="body-text">
+              Projects input fields into a shared latent space:
+            </p>
+            <div class="equation-block" style="margin-top: 8px;">
+              $$u_m = P_m x^{(m)}_{dp} + b_m \quad (4.25)$$
             </div>
-
-
           </div>
 
-          <div
-            style="flex: 1 1 0px !important; width: 48% !important; max-width: 48% !important; border-left: 1px solid #e0e0e0 !important; padding-left: 4% !important; display: flex !important; flex-direction: column !important; justify-content: flex-start !important; box-sizing: border-box !important;">
-
-            <div style="margin-bottom: 25px !important;">
-              <h2 class="section-heading" style="margin: 0 0 8px 0;">Compared Baselines</h2>
-              <ul class="bullet-list" style="margin: 0; padding-left: 20px;">
-                <li style="margin-bottom: 6px;">
-                  <strong>Descriptor-only:</strong> Logistic Regression (Linear) | Random Forest &amp; XGBoost
-                  (Non-linear).
-                </li>
-                <li style="margin-bottom: 0;">
-                  <strong>KGE-NFM Variants:</strong> DistMult-NFM (Bilinear) vs. <strong>CompGCN-NFM</strong>
-                  (Proposed).
-                </li>
-              </ul>
+          <div class="config-block" style="margin-top: 25px;">
+            <h2 class="section-heading">Bi-Interaction Pooling</h2>
+            <p class="body-text">
+              Captures pairwise non-linear interactions between relational context and structural descriptors:
+            </p>
+            <div class="equation-block" style="margin-top: 8px;">
+              $$f_{BI} = \frac{1}{2} \left[ \left( \sum_{m=1}^M u_m \right)^2 - \sum_{m=1}^M u_m^2 \right] \quad
+              (4.26)$$
             </div>
-
-            <div>
-              <h2 class="section-heading" style="margin: 0 0 8px 0;">Evaluation Metrics</h2>
-              <ul class="bullet-list" style="margin: 0; padding-left: 20px;">
-                <li style="margin-bottom: 6px;">
-                  <strong>ROC-AUC:</strong> Measures global ranking discrimination across thresholds.
-                </li>
-                <li style="margin-bottom: 0;">
-                  <strong>PR-AUC:</strong> Evaluates precision-recall balance; critical for the highly imbalanced 1:10
-                  setting.
-                </li>
-              </ul>
-            </div>
-
           </div>
 
         </main>
@@ -978,142 +978,354 @@
         <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
         <div class="bottom-red-line"></div>
       </section>
-<section class="slide">
-  <header class="slide-header">Main Results: DTI Prediction Performance</header>
-  <div class="yellow-line"></div>
+      <section class="slide">
+        <header class="slide-header">Neural Factorization Machine: Deep Prediction Layers</header>
+        <div class="yellow-line"></div>
 
-  <main class="slide-content" style="padding-top: 25px; box-sizing: border-box;">
+        <main class="slide-content" style="padding-top: 5px; box-sizing: border-box;">
 
-    <div class="config-block" style="margin-bottom: 20px;">
-      <h2 class="section-heading">Evaluation Overview</h2>
-      <ul class="bullet-list" style="margin: 0; padding-left: 20px; font-size: 19px;">
-        <li style="margin-bottom: 4px;"><strong>Protocol:</strong> 10-fold cross-validation (Warm-start).</li>
-        <li style="margin-bottom: 4px;"><strong>Objective:</strong> Compare descriptor-only baselines vs. KG-enhanced NFM variants under balanced (1:1) and imbalanced (1:10) settings.</li>
-      </ul>
-    </div>
+          <div class="config-block" style="margin-top: 10px;">
+            <h2 class="section-heading">Deep Hidden Layers (MLP)</h2>
+            <p class="body-text">
+              The interaction vector \(f_{BI}\) is processed through non-linear layers to learn high-order DTI patterns:
+            </p>
+            <div class="equation-block" style="margin-top: 5px;">
+              $$a^{(l+1)} = \text{ReLU} \left( W^{(l)} a^{(l)} + b^{(l)} \right) \quad (4.27)$$
+            </div>
+          </div>
 
-    <div class="config-block" style="text-align: center;">
-      <h2 class="section-heading" style="margin: 0 0 15px 0; font-size: 30px; font-weight: 700; color: var(--text-dark); text-align: left;">
-        Table 2: Average DTI prediction performance on Yamanishi08 warm-start settings
-      </h2>
-      <img src="https://i.ibb.co/HpFPf5sZ/Screenshot-2026-06-24-164507.png" 
-           alt="Table 2: DTI prediction performance" 
-           style="width: 100%; max-width: 1050px; height: auto; display: block; margin: 0 auto; border: none;">
-    </div>
+          <div class="config-block" style="margin-top: 15px;">
+            <h2 class="section-heading">Final DTI Prediction</h2>
+            <p class="body-text">
+              Combines linear field terms with the non-linear interaction output to compute the final interaction
+              probability \(\hat{y}_{dp} = \sigma(o_{dp}) \quad (4.29)\):
+            </p>
+            <div class="equation-block" style="margin-top: 5px;">
+              $$o_{dp} = \sum_{m=1}^M (a_m^\top x_{dp}^{(m)} + c_m) + \text{MLP}(f_{BI}) \quad (4.28)$$
+            </div>
+          </div>
 
-  </main>
+          <div class="config-block" style="margin-top: 15px;">
+            <h2 class="section-heading">Binary Classification Objective (BCO)</h2>
+            <p class="body-text">
+              Optimized via Binary Cross-Entropy loss using the estimated probabilities against true interaction labels:
+            </p>
+            <div class="equation-block" style="margin-top: 5px;">
+              $$\mathcal{L}_{DTI} = -\frac{1}{N} \sum_{i=1}^N \left[ y_i \log(\hat{y}_i) + (1-y_i) \log(1-\hat{y}_i)
+              \right] \quad (4.30)$$
+            </div>
+          </div>
 
-  <footer class="slide-footer"></footer>
-  <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
-  <div class="bottom-red-line"></div>
-</section>
+        </main>
 
-<section class="slide">
-  <header class="slide-header">CompGCN Hyperparameter Tuning</header>
-  <div class="yellow-line"></div>
+        <footer class="slide-footer" style="padding-bottom: 5px;"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
 
-  <main class="slide-content" style="padding-top: 25px; box-sizing: border-box;">
+      <!-- Chapter 5 Divider -->
+      <section class="slide">
+        <div style="display: flex; width: 100%; height: 100%;">
+          <div
+            style="width: 523.49px; height: 1080px; background-image: url('https://i.ibb.co/zWpsBFhX/Screenshot-2026-06-23-204625.png'); background-size: cover; background-position: center;">
+          </div>
 
-    <div class="config-block" style="margin-bottom: 25px;">
-      <h2 class="section-heading">Optimization Strategy</h2>
-      <ul class="bullet-list" style="margin: 0; padding-left: 20px; font-size: 19px;">
-        <li style="margin-bottom: 6px;"><strong>Target:</strong> Staged tuning on the Yamanishi 1:10 imbalanced setting.</li>
-        <li><strong>Search Space:</strong> Explored embedding dimensions, negative sampling counts, and depth of GCN message-passing layers.</li>
-      </ul>
-    </div>
+          <div
+            style="width: 916.51px; height: 1080px; display: flex; align-items: center; justify-content: center; background-color: #ffffff; padding: 40px; box-sizing: border-box;">
+            <h1
+              style="font-family: 'Lato', sans-serif; font-size: 80px; color: #C00000; margin: 0; text-transform: uppercase; letter-spacing: 2px; text-align: center; line-height: 1.2;">
+              EXPERIMENTAL SETUP AND RESULTS
+            </h1>
+          </div>
+        </div>
+      </section>
 
-    <div class="config-block" style="text-align: center;">
-      <h2 class="section-heading" style="margin-bottom: 15px; font-size: 30px; text-align: left;">
-        Table 3: CompGCN hyperparameter tuning results (1:10 setting)
-      </h2>
-      <img src="https://i.ibb.co/27mZZpKq/Screenshot-2026-06-24-164459.png" 
-           alt="Table 3: Hyperparameter tuning" 
-           style="width: 100%; max-width: 1050px; height: auto; display: block; margin: 0 auto; border: none;">
-    </div>
+      <section class="slide">
+        <header class="slide-header">Experimental Configuration</header>
+        <div class="yellow-line"></div>
 
-  </main>
+        <main class="slide-content" style="padding-top: 25px; box-sizing: border-box;">
 
-  <footer class="slide-footer"></footer>
-  <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
-  <div class="bottom-red-line"></div>
-</section>
+          <div class="config-block">
+            <h2 class="section-heading" style="color: #C02034; margin-bottom: 12px;">Benchmarks &amp; Data Settings</h2>
+            <ul class="bullet-list">
+              <li><strong>Dataset &amp; Ratios:</strong> Yamanishi08 DTI benchmark evaluated under <strong>1:1
+                  (balanced)</strong> and <strong>1:10 (imbalanced)</strong> settings to reflect real-world interaction
+                sparsity.</li>
+              <li><strong>Evaluation Protocol:</strong> 10-fold cross-validation under a <strong>warm-start</strong>
+                scenario (entities are observed during training but in novel test combinations).</li>
+            </ul>
+          </div>
 
-<section class="slide">
-  <header class="slide-header">Ablation Study: Component Contribution</header>
-  <div class="yellow-line"></div>
+          <div class="config-block" style="margin-top: 15px;">
+            <h2 class="section-heading" style="color: #C02034; margin-bottom: 12px;">Feature Preprocessing &amp;
+              Anti-Leakage</h2>
+            <ul class="bullet-list">
+              <li><strong>Protein Descriptors:</strong> 147-dimensional CTD descriptors reduced to <strong>100 PCA
+                  components</strong> to mitigate dimensional complexity.</li>
+              <li><strong>Data Leakage Prevention:</strong> PCA and scaling parameters are fitted <strong>strictly on
+                  training folds</strong> before projecting onto test folds.</li>
+            </ul>
+          </div>
 
-  <main class="slide-content" style="padding-top: 30px; box-sizing: border-box;">
+          <div class="config-block" style="margin-top: 20px;">
+            <h2 class="section-heading" style="color: #C02034; margin-bottom: 12px;">Core Architecture Hyperparameters
+            </h2>
+            <div style="display: flex; gap: 40px;">
+              <div
+                style="flex: 1; padding: 20px; background-color: #f9f9f9; border-left: 5px solid #C02034; border-radius: 4px;">
+                <strong style="font-size: 26px; display: block; margin-bottom: 8px; color: #222;">KGE Stage
+                  (CompGCN)</strong>
+                <span class="body-text" style="font-size: 26px;">200-dim embeddings, 3 message-passing layers, 5
+                  negative samples per positive triple.</span>
+              </div>
+              <div
+                style="flex: 1; padding: 20px; background-color: #f9f9f9; border-left: 5px solid #FFC107; border-radius: 4px;">
+                <strong style="font-size: 26px; display: block; margin-bottom: 8px; color: #222;">NFM Stage
+                  (Classifier)</strong>
+                <span class="body-text" style="font-size: 26px;">2 hidden layers (128 units each), ReLU activation,
+                  implemented with early stopping.</span>
+              </div>
+            </div>
+          </div>
 
-    <div class="config-block" style="margin-bottom: 25px;">
-      <h2 class="section-heading" style="margin: 0 0 6px 0; font-size: 20px; font-weight: 700; color: var(--text-dark);">Analysis Objective</h2>
-      <ul class="bullet-list" style="margin: 0; padding-left: 20px; font-size: 19px; line-height: 1.4;">
-        <li><strong>Target:</strong> Evaluate the impact of Knowledge Graph (KG) scoring, descriptor-based prediction, and multimodal fusion on the Yamanishi 1:10 setting.</li>
-      </ul>
-    </div>
+        </main>
 
-    <div class="config-block" style="text-align: center;">
-      <h2 class="section-heading" style="margin: 0 0 15px 0; font-size: 30px; font-weight: 700; color: var(--text-dark); text-align: left;">
-        Table 4: Ablation results on Yamanishi 1:10
-      </h2>
-      <img src="https://i.ibb.co/mCjZbz5x/Screenshot-2026-06-24-164453.png" 
-           alt="Table 4: Ablation study results" 
-           style="width: 100%; max-width: 1050px; height: auto; display: block; margin: 0 auto; border: none;">
-    </div>
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
 
-  </main>
 
-  <footer class="slide-footer"></footer>
-  <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
-  <div class="bottom-red-line"></div>
-</section>
+      <section class="slide">
+        <header class="slide-header">Compared Baselines &amp; Metrics</header>
+        <div class="yellow-line"></div>
 
-<section class="slide">
-  <header class="slide-header">Conclusion &amp; Future Work</header>
-  <div class="yellow-line"></div>
+        <main class="slide-content" style="padding-top: 25px; box-sizing: border-box;">
 
-  <main class="slide-content" style="padding-top: 5px; box-sizing: border-box;">
-    <div style="display: flex; gap: 15px; margin-top: 15px; align-items: stretch; height: calc(100% - 40px);">
-      
-      <div class="config-block" style="flex: 1; background-color: #f4f7fa; border-top: 4px solid #2980b9; padding: 12px; border-radius: 4px;">
-        <h2 class="section-heading" style="color: #2980b9; margin-bottom: 10px; font-size: 20px; display: flex; align-items: center; gap: 6px;">
-          <span>✔️</span> Conclusion
-        </h2>
-        <ul class="bullet-list" style="margin: 0; padding-left: 15px; font-size: 16.5px; line-height: 1.4;">
-          <li style="margin-bottom: 8px;"><strong>Framework:</strong> Developed KGE-NFM pipeline successfully integrating KG context with biochemical descriptors.</li>
-          <li style="margin-bottom: 8px;"><strong>Performance:</strong> CompGCN-NFM achieved SOTA on 1:10 imbalanced setting: <strong style="color: #b30000;">0.9866 ROC-AUC</strong> and <strong style="color: #b30000;">0.9362 PR-AUC</strong>.</li>
-          <li><strong>Synergy:</strong> Relational and structural features provide complementary data; standalone graph completion is insufficient.</li>
-        </ul>
-      </div>
+          <div class="config-block">
+            <h2 class="section-heading" style="color: #C02034; margin-bottom: 15px;">Compared Baselines</h2>
 
-      <div class="config-block" style="flex: 1; background-color: #fffbf4; border-top: 4px solid #e67e22; padding: 12px; border-radius: 4px;">
-        <h2 class="section-heading" style="color: #e67e22; margin-bottom: 10px; font-size: 20px; display: flex; align-items: center; gap: 6px;">
-          <span>💡</span> Key Findings
-        </h2>
-        <ul class="bullet-list" style="margin: 0; padding-left: 15px; font-size: 16.5px; line-height: 1.4;">
-          <li style="margin-bottom: 12px;"><strong>KG Embeddings:</strong> Effectively summarize global relational evidence (pathways, diseases, functions) for entities.</li>
-          <li><strong>NFM Expressiveness:</strong> Successfully captures high-order nonlinear interactions between heterogeneous feature fields.</li>
-        </ul>
-      </div>
+            <div style="display: flex; gap: 30px; align-items: stretch;">
+              <div style="flex: 1; border: 2px ; padding: 25px; border-radius: 8px;">
+                <h3
+                  style="font-size: 28px; color: #555; margin-bottom: 15px; text-transform: uppercase; font-weight: bold;">
+                  Descriptor-Only (Classical)</h3>
+                <p class="body-text" style="font-size: 26px; margin-bottom: 12px;">Trained purely on molecular
+                  fingerprints and sequence descriptors.</p>
+                <ul class="bullet-list" style="gap: 10px;">
+                  <li><strong>Linear:</strong> Logistic Regression (LR)</li>
+                  <li><strong>Non-linear:</strong> Random Forest (RF), XGBoost</li>
+                </ul>
+              </div>
 
-      <div class="config-block" style="flex: 1; background-color: #f5faf6; border-top: 4px solid #27ae60; padding: 12px; border-radius: 4px;">
-        <h2 class="section-heading" style="color: #27ae60; margin-bottom: 10px; font-size: 20px; display: flex; align-items: center; gap: 6px;">
-          <span>🚀</span> Future Work
-        </h2>
-        <ul class="bullet-list" style="margin: 0; padding-left: 15px; font-size: 16.5px; line-height: 1.4;">
-          <li style="margin-bottom: 6px;"><strong>Cold-Start Evaluation:</strong> Testing generalization on entirely unseen drugs/proteins.</li>
-          <li style="margin-bottom: 6px;"><strong>Representation Enrichment:</strong> Integrating molecular GNNs and Protein Language Models (PLMs).</li>
-          <li style="margin-bottom: 6px;"><strong>Encoder Expansion:</strong> Comparing ComplEx, RotatE, and TransE under the same protocol.</li>
-          <li><strong>Biological Validation:</strong> Verifying high-confidence predictions via external databases/literature.</li>
-        </ul>
-      </div>
+              <div
+                style="display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 40px; color: #C02034; padding: 0 15px;">
+                VS
+              </div>
 
-    </div>
-  </main>
+              <div style="flex: 1; ; border: 2px ; padding: 25px; border-radius: 8px;">
+                <h3
+                  style="font-size: 28px; color: #b30000; margin-bottom: 15px; text-transform: uppercase; font-weight: bold;">
+                  KG-Enhanced (Proposed)</h3>
+                <p class="body-text" style="font-size: 26px; margin-bottom: 12px;">Architectures integrating relational
+                  graph context via NFM.</p>
+                <ul class="bullet-list" style="gap: 10px;">
+                  <li><strong>DistMult-NFM:</strong> Bilinear relational encoder.</li>
+                  <li><strong>CompGCN-NFM:</strong> Relation-aware message-passing (Ours).</li>
+                </ul>
+              </div>
+            </div>
+          </div>
 
-  <footer class="slide-footer"></footer>
-  <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
-  <div class="bottom-red-line"></div>
-</section>
+          <div class="config-block" style="margin-top: 25px;">
+            <h2 class="section-heading" style="color: #C02034; margin-bottom: 12px;">Evaluation Metrics</h2>
+            <ul class="bullet-list">
+              <li><strong>ROC-AUC:</strong> Probability that a random positive pair is ranked higher than a random
+                negative pair across all thresholds.</li>
+              <li><strong>PR-AUC:</strong> Summarizes the precision-recall curve. <strong>Crucial Metric:</strong>
+                Reflects the true quality of positive rankings in the imbalanced (1:10) scenario.</li>
+            </ul>
+          </div>
+
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
+
+      <section class="slide">
+        <header class="slide-header">Main Results: DTI Prediction Performance</header>
+        <div class="yellow-line"></div>
+
+        <main class="slide-content" style="padding-top: 25px; box-sizing: border-box;">
+
+          <div class="config-block" style="margin-bottom: 20px;">
+            <h2 class="section-heading">Evaluation Overview</h2>
+            <ul class="bullet-list" style="margin: 0; padding-left: 20px; font-size: 19px;">
+              <li style="margin-bottom: 4px;"><strong>Protocol:</strong> 10-fold cross-validation (Warm-start).</li>
+              <li style="margin-bottom: 4px;"><strong>Objective:</strong> Compare descriptor-only baselines vs.
+                KG-enhanced NFM variants under balanced (1:1) and imbalanced (1:10) settings.</li>
+            </ul>
+          </div>
+
+          <div class="config-block" style="text-align: center;">
+            <h2 class="section-heading">
+              Table 2: Average DTI prediction performance on Yamanishi08 warm-start settings
+            </h2>
+            <img src="https://i.ibb.co/HpFPf5sZ/Screenshot-2026-06-24-164507.png"
+              alt="Table 2: DTI prediction performance"
+              style="width: 100%; max-width: 1050px; height: auto; display: block; margin: 0 auto; border: none;">
+          </div>
+
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
+
+      <section class="slide">
+        <header class="slide-header">CompGCN Hyperparameter Tuning</header>
+        <div class="yellow-line"></div>
+
+        <main class="slide-content" style="padding-top: 25px; box-sizing: border-box;">
+
+          <div class="config-block" style="margin-bottom: 25px;">
+            <h2 class="section-heading">Optimization Strategy</h2>
+            <ul class="bullet-list" style="margin: 0; padding-left: 20px; font-size: 19px;">
+              <li style="margin-bottom: 6px;"><strong>Target:</strong> Staged tuning on the Yamanishi 1:10 imbalanced
+                setting.</li>
+              <li><strong>Search Space:</strong> Explored embedding dimensions, negative sampling counts, and depth of
+                GCN message-passing layers.</li>
+            </ul>
+          </div>
+
+          <div class="config-block" style="text-align: center;">
+            <h2 class="section-heading">
+              Table 3: CompGCN hyperparameter tuning results (1:10 setting)
+            </h2>
+            <img src="https://i.ibb.co/27mZZpKq/Screenshot-2026-06-24-164459.png" alt="Table 3: Hyperparameter tuning"
+              style="width: 100%; max-width: 1050px; height: auto; display: block; margin: 0 auto; border: none;">
+          </div>
+
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
+
+      <section class="slide">
+        <header class="slide-header">Ablation Study: Component Contribution</header>
+        <div class="yellow-line"></div>
+
+        <main class="slide-content" style="padding-top: 30px; box-sizing: border-box;">
+
+          <div class="config-block" style="margin-bottom: 25px;">
+            <h2 class="section-heading"
+              style="margin: 0 0 6px 0; font-size: 20px; font-weight: 700; color: var(--text-dark);">Analysis Objective
+            </h2>
+            <ul class="bullet-list" style="margin: 0; padding-left: 20px; font-size: 19px; line-height: 1.4;">
+              <li><strong>Target:</strong> Evaluate the impact of Knowledge Graph (KG) scoring, descriptor-based
+                prediction, and multimodal fusion on the Yamanishi 1:10 setting.</li>
+            </ul>
+          </div>
+
+          <div class="config-block" style="text-align: center;">
+            <h2 class="section-heading">
+              Table 4: Ablation results on Yamanishi 1:10
+            </h2>
+            <img src="https://i.ibb.co/mCjZbz5x/Screenshot-2026-06-24-164453.png" alt="Table 4: Ablation study results"
+              style="width: 100%; max-width: 2000px; height: auto; display: block; margin: 0 auto; border: none;">
+          </div>
+
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
+
+      <!-- Chapter 6 Divider -->
+      <section class="slide">
+        <div style="display: flex; width: 100%; height: 100%;">
+          <div
+            style="width: 523.49px; height: 1080px; background-image: url('https://i.ibb.co/zWpsBFhX/Screenshot-2026-06-23-204625.png'); background-size: cover; background-position: center;">
+          </div>
+
+          <div
+            style="width: 916.51px; height: 1080px; display: flex; align-items: center; justify-content: center; background-color: #ffffff; padding: 40px; box-sizing: border-box;">
+            <h1
+              style="font-family: 'Lato', sans-serif; font-size: 80px; color: #C00000; margin: 0; text-transform: uppercase; letter-spacing: 2px; text-align: center; line-height: 1.2;">
+              CONCLUSION AND FUTURE WORK
+            </h1>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <header class="slide-header">Conclusion &amp; Future Work</header>
+        <div class="yellow-line"></div>
+
+        <main class="slide-content" style="padding-top: 5px; box-sizing: border-box;">
+          <div style="display: flex; gap: 15px; margin-top: 15px; align-items: stretch; height: calc(100% - 40px);">
+
+            <div class="config-block"
+              style="flex: 1; background-color: #f4f7fa; border-top: 4px solid #2980b9; padding: 12px; border-radius: 4px;">
+              <h2 class="section-heading"
+                style="color: #2980b9; margin-bottom: 10px; font-size: 20px; display: flex; align-items: center; gap: 6px;">
+                Conclusion
+              </h2>
+              <ul class="bullet-list" style="margin: 0; padding-left: 15px; font-size: 16.5px; line-height: 1.4;">
+                <li style="margin-bottom: 8px;"><strong>Framework:</strong> Developed KGE-NFM pipeline successfully
+                  integrating KG context with biochemical descriptors.</li>
+                <li style="margin-bottom: 8px;"><strong>Performance:</strong> CompGCN-NFM achieved SOTA on 1:10
+                  imbalanced setting: 0.9866 ROC-AUC and 0.9362 PR-AUC.</li>
+                <li><strong>Synergy:</strong> Relational and structural features provide complementary data; standalone
+                  graph completion is insufficient.</li>
+              </ul>
+            </div>
+
+            <div class="config-block"
+              style="flex: 1; background-color: #fffbf4; border-top: 4px solid #e67e22; padding: 12px; border-radius: 4px;">
+              <h2 class="section-heading"
+                style="color: #e67e22; margin-bottom: 10px; font-size: 20px; display: flex; align-items: center; gap: 6px;">
+                Key Findings
+              </h2>
+              <ul class="bullet-list" style="margin: 0; padding-left: 15px; font-size: 16.5px; line-height: 1.4;">
+                <li style="margin-bottom: 12px;"><strong>KG Embeddings:</strong> Effectively summarize global relational
+                  evidence (pathways, diseases, functions) for entities.</li>
+                <li><strong>NFM Expressiveness:</strong> Successfully captures high-order nonlinear interactions between
+                  heterogeneous feature fields.</li>
+              </ul>
+            </div>
+
+            <div class="config-block"
+              style="flex: 1; background-color: #f5faf6; border-top: 4px solid #27ae60; padding: 12px; border-radius: 4px;">
+              <h2 class="section-heading"
+                style="color: #27ae60; margin-bottom: 10px; font-size: 20px; display: flex; align-items: center; gap: 6px;">
+                Future Work
+              </h2>
+              <ul class="bullet-list" style="margin: 0; padding-left: 15px; font-size: 16.5px; line-height: 1.4;">
+                <li style="margin-bottom: 6px;"><strong>Cold-Start Evaluation:</strong> Testing generalization on
+                  entirely unseen drugs/proteins.</li>
+                <li style="margin-bottom: 6px;"><strong>Representation Enrichment:</strong> Integrating molecular GNNs
+                  and Protein Language Models (PLMs).</li>
+                <li style="margin-bottom: 6px;"><strong>Encoder Expansion:</strong> Comparing ComplEx, RotatE, and
+                  TransE under the same protocol.</li>
+
+              </ul>
+            </div>
+
+          </div>
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
     </div>
   </div>
 
@@ -1121,37 +1333,37 @@
 
   <script>
     const slides = document.querySelectorAll('.slide');
-      const totalSlides = slides.length;
-      let currentSlide = totalSlides - 1;
-  
-      function showSlide(index) {
-        slides.forEach((s, i) => s.classList.toggle('active', i === index));
-        if (window.MathJax) MathJax.typesetPromise();
+    const totalSlides = slides.length;
+    let currentSlide = totalSlides - 1;
 
-      }
-  
-      function autoScale() {
-        const scale = Math.min(window.innerWidth / 1440, window.innerHeight / 1080);
-        document.getElementById('stage').style.transform = 'scale(' + scale + ')';
-      }
-  
-      document.addEventListener('keydown', (e) => {
-        if ((e.key === 'ArrowRight' || e.key === ' ')){
-          if (currentSlide < totalSlides - 1) {
-            showSlide(++currentSlide);
-          }
-          else {
-            currentSlide = 0;
-            showSlide(0);
-          }
+    function showSlide(index) {
+      slides.forEach((s, i) => s.classList.toggle('active', i === index));
+      if (window.MathJax) MathJax.typesetPromise();
+
+    }
+
+    function autoScale() {
+      const scale = Math.min(window.innerWidth / 1440, window.innerHeight / 1080);
+      document.getElementById('stage').style.transform = 'scale(' + scale + ')';
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if ((e.key === 'ArrowRight' || e.key === ' ')) {
+        if (currentSlide < totalSlides - 1) {
+          showSlide(++currentSlide);
         }
-        if (e.key === 'ArrowLeft' && currentSlide > 0) {
-          showSlide(--currentSlide);
+        else {
+          currentSlide = 0;
+          showSlide(0);
         }
-      });
-  
-      window.addEventListener('DOMContentLoaded', () => { showSlide(currentSlide); autoScale(); });
-      window.addEventListener('resize', autoScale);
+      }
+      if (e.key === 'ArrowLeft' && currentSlide > 0) {
+        showSlide(--currentSlide);
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', () => { showSlide(currentSlide); autoScale(); });
+    window.addEventListener('resize', autoScale);
   </script>
 
 </body>

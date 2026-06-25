@@ -176,15 +176,7 @@
       position: relative;
     }
 
-    .equation-block::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 4px;
-      background-color: var(--hust-red);
-    }
+    
   </style>
 </head>
 
@@ -326,67 +318,62 @@
       </section>
 
       <section class="slide">
-        <header class="slide-header">Existing DTI Prediction Approaches</header>
-        <div class="yellow-line"></div>
+  <header class="slide-header">Existing DTI Prediction Approaches</header>
+  <div class="yellow-line"></div>
 
-        <main class="slide-content" style="padding-top: 25px;">
+  <main class="slide-content" style="padding-top: 25px;">
+    <div class="config-block">
+      <h2 class="section-heading" style="margin-bottom: 15px;">Methodology Taxonomy</h2>
 
-          <div class="config-block">
-            <h2 class="section-heading" style="margin-bottom: 15px;">Methodology Taxonomy</h2>
+      <div style="display: flex; flex-direction: column; gap: 20px;">
 
-            <div style="display: flex; flex-direction: column; gap: 20px;">
-
-              <div class="method-item">
-                <p class="body-text" style="margin: 0;">
-                  <strong>1. Descriptor-based Methods:</strong> Supervised classification using intrinsic
-                  molecular/sequence features.
-                </p>
-                <div class="equation-block" style="margin: 6px 0;">
-                  $$\hat{y}_{dp} = F(s_d, s_p)$$
-                </div>
-                <p class="body-text">
-                  <span style="color: #c0392b;"><strong>Limitation:</strong></span> Ignores global topological relations
-                  between biomedical entities.
-                </p>
-              </div>
-
-              <div class="method-item">
-                <p class="body-text" style="margin: 0;">
-                  <strong>2. Network &amp; KG-based Methods:</strong> Explores topology using Knowledge Graph Embeddings
-                  (KGE).
-                </p>
-                <div class="equation-block" style="margin: 6px 0;">
-                  $$z_e = \text{KGE}(e, G), \quad \hat{y}_{dp} = F(z_d, z_p)$$
-                </div>
-                <p class="body-text">
-                  <span style="color: #27ae60;"><strong>Benefit:</strong></span> Captures complex multi-scale relations
-                  (pathways, diseases) beyond DTI pairs.
-                </p>
-              </div>
-
-              <div class="method-item">
-                <p class="body-text" style="margin: 0;">
-                  <strong>3. Hybrid / Proposed Approach (KGE-NFM):</strong> Jointly fuses relational graph context and
-                  structural descriptors.
-                </p>
-                <div class="equation-block" style="margin: 6px 0;">
-                  $$\hat{y}_{dp} = \text{NFM}(z_d, z_p, s_d, s_p)$$
-                </div>
-                <p class="body-text">
-                  <span style="color: #2980b9;"><strong>Synergy:</strong></span> Maximizes expressiveness via high-order
-                  non-linear feature interactions.
-                </p>
-              </div>
-
-            </div>
+        <!-- Method 1 -->
+        <div class="method-item">
+          <p class="body-text" style="margin: 0;">
+            <strong>1. Descriptor-based Methods:</strong> Uses intrinsic molecular/sequence features.
+          </p>
+          <div class="equation-block" style="margin: 6px 0;">
+            $$\hat{y}_{dp} = F(s_d, s_p)$$
           </div>
+          <p class="body-text" style="margin: 0;">
+            <strong>Pros &amp; Cons:</strong> Captures chemical properties, but ignores global network topology.
+          </p>
+        </div>
 
-        </main>
+        <!-- Method 2 -->
+        <div class="method-item">
+          <p class="body-text" style="margin: 0;">
+            <strong>2. Network &amp; KG-based Methods:</strong> Explores network topology via KG Embeddings.
+          </p>
+          <div class="equation-block" style="margin: 6px 0;">
+            $$z_e = \text{KGE}(e, G), \quad \hat{y}_{dp} = F(z_d, z_p)$$
+          </div>
+          <p class="body-text" style="margin: 0;">
+            <strong>Pros &amp; Cons:</strong> Captures multi-scale relations, but suffers from data sparsity.
+          </p>
+        </div>
 
-        <footer class="slide-footer"></footer>
-        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
-        <div class="bottom-red-line"></div>
-      </section>
+        <!-- Our Proposal -->
+        <div class="method-item" style="background-color: #f8f9fa; padding: 12px; border-left: 4px solid #333;">
+          <p class="body-text" style="margin: 0;">
+            <strong>3. Our Proposal (KGE-NFM):</strong> Fuses relational graph context and structural descriptors.
+          </p>
+          <div class="equation-block" style="margin: 6px 0;">
+            $$\hat{y}_{dp} = \text{NFM}(z_d, z_p, s_d, s_p)$$
+          </div>
+          <p class="body-text" style="margin: 0;">
+            <strong>Synergy:</strong> Combines topology and molecular features via high-order non-linear interactions.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <footer class="slide-footer"></footer>
+  <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+  <div class="bottom-red-line"></div>
+</section>
 
       <!-- Slide 2.1. Biomedical Knowledge Graph Representation -->
       <section class="slide">
@@ -458,7 +445,7 @@
           <div class="config-block" style="margin-top: 25px;">
             <h2 class="section-heading" style="color: #C02034; margin-bottom: 10px;">The Update Rule</h2>
             <div class="equation-block"
-              style="background: #f9f9f9; padding: 20px; border-radius: 10px; font-size: 32px;">
+              style="padding: 20px; border-radius: 10px; font-size: 32px;">
               $$H^{(k+1)} = \sigma\left( \hat{A} H^{(k)} W^{(k)} \right), \quad H^{(0)} = X \quad (2.9)$$
             </div>
 
@@ -504,7 +491,7 @@
           <div class="config-block" style="margin-top: 15px;">
             <h2 class="section-heading" style="color: #C02034; margin-bottom: 10px;">Multi-Relational Update Rule</h2>
             <div class="equation-block"
-              style="background: #f9f9f9; padding: 20px; border-radius: 10px; font-size: 32px;">
+              style=" padding: 20px; border-radius: 10px; font-size: 32px;">
               $$h_v^{k+1} = \sigma \left( \sum_{(u,r) \in \mathcal{N}(v)} c_{v,r}^{-1} W_r^k h_u^k \right) \quad
               (2.10)$$
             </div>
@@ -698,10 +685,10 @@
           style="padding-top: 30px; display: flex !important; flex-direction: row !important; gap: 40px !important; align-items: stretch !important; box-sizing: border-box !important;">
 
           <div
-            style="width: 38% !important; min-width: 38% !important; display: block !important; box-sizing: border-box !important;">
+            style="width: 45% !important; min-width: 45% !important; display: block !important; box-sizing: border-box !important;">
 
             <div style="margin-bottom: 20px !important;">
-              <h2 class="section-heading" style="margin: 0 0 8px 0;">STAGE 1: KGE</h2>
+              <h2 class="section-heading" style="margin: 0 0 8px 0;">STAGE 1: KNOWLEDGE GRAPH EMBEDDINGS</h2>
               <p class="body-text" style="margin: 0 !important;">
                 Input multi-relational graph \(\mathcal{G}\). Encoder generates dense knowledge graph embeddings:
               </p>
@@ -722,7 +709,7 @@
             </div>
 
             <div style="margin-bottom: 0 !important;">
-              <h2 class="section-heading" style="margin: 0 0 8px 0;">STAGE 2: NFM</h2>
+              <h2 class="section-heading" style="margin: 0 0 8px 0;">STAGE 2: NEURAL FACTORIZATION MACHINE</h2>
               <p class="body-text" style="margin: 0 !important;">
                 Model pairwise features and cross-field interactions \(v_i \odot v_j\) via deep neural networks,
                 outputting the final predicted probability:

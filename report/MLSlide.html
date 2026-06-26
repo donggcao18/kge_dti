@@ -317,63 +317,6 @@
         </div>
       </section>
 
-      <section class="slide">
-  <header class="slide-header">Existing DTI Prediction Approaches</header>
-  <div class="yellow-line"></div>
-
-  <main class="slide-content" style="padding-top: 25px;">
-    <div class="config-block">
-      <h2 class="section-heading" style="margin-bottom: 15px;">Methodology Taxonomy</h2>
-
-      <div style="display: flex; flex-direction: column; gap: 20px;">
-
-        <!-- Method 1 -->
-        <div class="method-item">
-          <p class="body-text" style="margin: 0;">
-            <strong>1. Descriptor-based Methods:</strong> Uses intrinsic molecular/sequence features.
-          </p>
-          <div class="equation-block" style="margin: 6px 0;">
-            $$\hat{y}_{dp} = F(s_d, s_p)$$
-          </div>
-          <p class="body-text" style="margin: 0;">
-            <strong>Pros &amp; Cons:</strong> Captures chemical properties, but ignores global network topology.
-          </p>
-        </div>
-
-        <!-- Method 2 -->
-        <div class="method-item">
-          <p class="body-text" style="margin: 0;">
-            <strong>2. Network &amp; KG-based Methods:</strong> Explores network topology via KG Embeddings.
-          </p>
-          <div class="equation-block" style="margin: 6px 0;">
-            $$z_e = \text{KGE}(e, G), \quad \hat{y}_{dp} = F(z_d, z_p)$$
-          </div>
-          <p class="body-text" style="margin: 0;">
-            <strong>Pros &amp; Cons:</strong> Captures multi-scale relations, but suffers from data sparsity.
-          </p>
-        </div>
-
-        <!-- Our Proposal -->
-        <div class="method-item" style=" padding: 12px; border-left: 4px">
-          <p class="body-text" style="margin: 0;">
-            <strong>3. Our Proposal (KGE-NFM):</strong> Fuses relational graph context and structural descriptors.
-          </p>
-          <div class="equation-block" style="margin: 6px 0;">
-            $$\hat{y}_{dp} = \text{NFM}(z_d, z_p, s_d, s_p)$$
-          </div>
-          <p class="body-text" style="margin: 0;">
-            <strong>Synergy:</strong> Combines topology and molecular features via high-order non-linear interactions.
-          </p>
-        </div>
-
-      </div>
-    </div>
-  </main>
-
-  <footer class="slide-footer"></footer>
-  <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
-  <div class="bottom-red-line"></div>
-</section>
 <section class="slide">
   <header class="slide-header">Biomedical Knowledge Graph Representation</header>
   <div class="yellow-line"></div>
@@ -421,6 +364,54 @@
   <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
   <div class="bottom-red-line"></div>
 </section>
+
+      <section class="slide"
+        style="width: 1440px; height: 1080px; position: absolute; top: 0; left: 0; background: #ffffff;">
+        <header class="slide-header">Graph Convolutional Networks: Undirected Graphs</header>
+        <div class="yellow-line"></div>
+
+        <main class="slide-content" style="padding-top: 30px;">
+
+          <div class="config-block">
+            <h2 class="section-heading" style="color: #C02034; margin-bottom: 12px;">Graph Signal Propagation</h2>
+            <p class="body-text">
+              For an undirected graph \(\mathcal{G}=(\mathcal{V},\mathcal{E},\mathbf{X})\), a GCN updates each node by
+              aggregating normalized features from its neighbors and itself.
+            </p>
+          </div>
+
+          <div class="config-block" style="margin-top: 15px;">
+            <h2 class="section-heading" style="color: #C02034; margin-bottom: 10px;">Layer-Wise Update Rule</h2>
+            <div class="equation-block" style="padding: 20px; border-radius: 10px; font-size: 32px;">
+              $$\mathbf{H}^{k+1} =
+              \sigma\left(\widehat{\mathbf{A}}\mathbf{H}^{k}\mathbf{W}^{k}\right),
+              \qquad \mathbf{H}^{0}=\mathbf{X} \quad (2.9)$$
+            </div>
+
+            <p class="body-text" style="margin-top: 15px;">
+              \(\widehat{\mathbf{A}}=\widetilde{\mathbf{D}}^{-1/2}(\mathbf{A}+\mathbf{I})\widetilde{\mathbf{D}}^{-1/2}\)
+              is the normalized adjacency matrix with self-connections.
+            </p>
+          </div>
+
+          <div class="config-block" style="margin-top: 15px;">
+            <h2 class="section-heading" style="color: #C02034; margin-bottom: 12px;">Why This Matters</h2>
+            <ul class="bullet-list">
+              <li><strong>Neighborhood aggregation:</strong> Stacking layers lets a node incorporate increasingly distant
+                context.</li>
+              <li><strong>Shared transformation:</strong> A single \(\mathbf{W}^{k}\) is applied to all edges in a
+                standard undirected graph.</li>
+              <li><strong>Limitation for KGs:</strong> Biomedical knowledge graphs require edge types and directions,
+                motivating multi-relational GCN variants.</li>
+            </ul>
+          </div>
+
+        </main>
+
+        <footer class="slide-footer"></footer>
+        <img src="https://i.ibb.co/xSk0ps87/Screenshot-2026-06-21-003938.png" alt="HUST Logo" class="bottom-logo">
+        <div class="bottom-red-line"></div>
+      </section>
 
       <section class="slide"
         style="width: 1440px; height: 1080px; position: absolute; top: 0; left: 0; background: #ffffff;">
@@ -551,10 +542,6 @@
                 <tr style="border-bottom: 1px solid #ddd; background-color: #f9f9f9;">
                   <td style="padding: 6px 12px;">Auxiliary KG triples</td>
                   <td style="padding: 6px 12px; text-align: right; font-weight: bold;">95,579</td>
-                </tr>
-                <tr style="border-bottom: 1px solid #ddd; background-color: #f9f9f9;">
-                  <td style="padding: 6px 12px;">Auxiliary KG entities</td>
-                  <td style="padding: 6px 12px; text-align: right; font-weight: bold;">25,487</td>
                 </tr>
                 <tr style="border-bottom: 2px solid #000; background-color: #f9f9f9;">
                   <td style="padding: 6px 12px;">Auxiliary KG relation types</td>
